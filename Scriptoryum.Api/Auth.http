@@ -1,0 +1,81 @@
+### Scriptoryum API - Testes de Autenticação
+
+### 1. Registrar novo usuário
+POST https://localhost:7000/api/auth/register
+Content-Type: application/json
+
+{
+  "userName": "usuario_teste",
+  "email": "teste@scriptoryum.com",
+  "password": "MinhaSenh@123",
+  "confirmPassword": "MinhaSenh@123"
+}
+
+### 2. Fazer login
+POST https://localhost:7000/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "teste@scriptoryum.com",
+  "password": "MinhaSenh@123",
+  "rememberMe": false
+}
+
+### 3. Obter informações do usuário autenticado (substitua {token} pelo token JWT recebido)
+GET https://localhost:7000/api/auth/me
+Authorization: Bearer {token}
+
+### 4. Validar token
+GET https://localhost:7000/api/auth/validate-token
+Authorization: Bearer {token}
+
+### 5. Renovar token
+POST https://localhost:7000/api/auth/refresh-token
+Content-Type: application/json
+
+"{token}"
+
+### 6. Obter perfil do usuário
+GET https://localhost:7000/api/account/profile
+Authorization: Bearer {token}
+
+### 7. Atualizar perfil
+PUT https://localhost:7000/api/account/profile
+Content-Type: application/json
+Authorization: Bearer {token}
+
+{
+  "userName": "novo_usuario",
+  "email": "novo@scriptoryum.com"
+}
+
+### 8. Alterar senha
+POST https://localhost:7000/api/account/change-password
+Content-Type: application/json
+Authorization: Bearer {token}
+
+{
+  "currentPassword": "MinhaSenh@123",
+  "newPassword": "NovaSenha@456",
+  "confirmNewPassword": "NovaSenha@456"
+}
+
+### 9. Listar documentos do usuário
+GET https://localhost:7000/api/account/documents
+Authorization: Bearer {token}
+
+### 10. Excluir conta (cuidado!)
+DELETE https://localhost:7000/api/account/delete-account
+Content-Type: application/json
+Authorization: Bearer {token}
+
+"MinhaSenh@123"
+
+### Exemplo de uso com token real:
+### Substitua o token abaixo por um token válido obtido do login
+
+# @token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+### Teste com token real
+GET https://localhost:7000/api/auth/me
+Authorization: Bearer {{token}}
