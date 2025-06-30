@@ -12,7 +12,10 @@ EXPOSE 8081
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["Scriptoryum.Api/Scriptoryum.Api.csproj", "Scriptoryum.Api/"]
+
+# Ajuste o caminho conforme a estrutura real do projeto.
+# Se o build está sendo executado a partir da raiz, mantenha assim:
+COPY Scriptoryum.Api/Scriptoryum.Api.csproj Scriptoryum.Api/
 RUN dotnet restore "./Scriptoryum.Api/Scriptoryum.Api.csproj"
 COPY . .
 WORKDIR "/src/Scriptoryum.Api"
