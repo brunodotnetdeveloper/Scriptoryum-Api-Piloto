@@ -62,6 +62,10 @@ public class ScriptoryumDbContext(DbContextOptions<ScriptoryumDbContext> options
                 .IsRequired()
                 .HasMaxLength(500);
 
+            entity.Property(d=>d.FileSize)
+                .IsRequired()
+                .HasDefaultValue(0);
+
             entity.Property(d => d.Description)
                 .HasMaxLength(2000);
             

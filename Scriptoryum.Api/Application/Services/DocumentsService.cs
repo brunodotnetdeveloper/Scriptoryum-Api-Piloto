@@ -93,6 +93,7 @@ public class DocumentsService(ScriptoryumDbContext context, ILogger<DocumentsSer
                 StorageProvider = StorageProvider.CloudflareR2,
                 StoragePath = objectName,
                 FileType = _allowedExtensions[fileExtension],
+                FileSize = uploadDto.File.Length,
                 UploadedByUserId = userId,
                 UploadedAt = DateTime.UtcNow,
                 Status = DocumentStatus.Uploaded
@@ -175,7 +176,7 @@ public class DocumentsService(ScriptoryumDbContext context, ILogger<DocumentsSer
             FileType = document.FileType,
             FileName = Path.GetFileName(document.StoragePath),
             StoragePath = document.StoragePath,
-            FileSize = 0, // Ajuste se necessário
+            FileSize = document.FileSize,
             Status = document.Status.ToString(),
             UploadedAt = document.UploadedAt,
             UploadedByUserId = document.UploadedByUserId,
@@ -241,7 +242,7 @@ public class DocumentsService(ScriptoryumDbContext context, ILogger<DocumentsSer
             FileType = document.FileType,
             FileName = Path.GetFileName(document.StoragePath),
             StoragePath = document.StoragePath,
-            FileSize = 0, // Tamanho será obtido via método separado se necessário
+            FileSize = document.FileSize,
             Status = document.Status.ToString(),
             UploadedAt = document.UploadedAt,
             UploadedByUserId = document.UploadedByUserId

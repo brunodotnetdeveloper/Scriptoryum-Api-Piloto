@@ -11,6 +11,7 @@ public class Document : EntityBase
     public StorageProvider StorageProvider { get; set; }
     public string StoragePath { get; set; }
     public FileType FileType { get; set; }
+    public long FileSize { get; set; }
 
     public string UploadedByUserId { get; set; }
     public ApplicationUser UploadedByUser { get; set; }
