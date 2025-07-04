@@ -1,6 +1,9 @@
 ﻿using Scriptoryum.Api.Application.Dtos;
 using Scriptoryum.Api.Application.Helpers;
-using Scriptoryum.Api.Infrastructure.Clients.OpenAI;
+using Scriptoryum.Api.Application.Models;
+using Scriptoryum.Api.Application.Utils;
+using Scriptoryum.Api.Domain.Enums;
+using Scriptoryum.Api.Infrastructure.Clients.Gemini;
 using Scriptoryum.Api.Infrastructure.Context;
 using System.Text.Json;
 
@@ -8,6 +11,8 @@ namespace Scriptoryum.Api.Application.Services;
 
 public interface IEscribaService
 {
+    Task QueueDocumentAnalysis(int documentId, string userId);
+    Task ProcessDocumentAnalysisAsync(DocumentAnalysisMessage message);
     Task<DocumentAnalysisDto> AnalyzeDocument(int documentId);
     Task<List<ExtractedEntityDto>> ExtractEntitiesAsync(int documentId);
     Task<List<RiskDetectedDto>> DetectRisksAsync(int documentId);
@@ -15,13 +20,109 @@ public interface IEscribaService
     Task<List<TimelineEventDto>> ExtractTimelineEventsAsync(int documentId);
 }
 
-public class EscribaService(OpenAIClient openAIClient, ScriptoryumDbContext dbContext) : IEscribaService
+public class EscribaService : IEscribaService
 {
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {
         PropertyNameCaseInsensitive = true,
         Converters = { new RiskLevelJsonConverter(), new EntityTypeJsonConverter(), new InsightCategoryJsonConverter(), new ImportanceLevelJsonConverter() }
     };
+
+    private readonly IBackgroundTaskQueue<DocumentAnalysisMessage> _analysisQueue;
+    private readonly ILogger<EscribaService> _logger;
+    private readonly GeminiClient geminiClient;
+    private readonly ScriptoryumDbContext dbContext;
+
+    public EscribaService(
+        GeminiClient geminiClient,
+        ScriptoryumDbContext dbContext,
+        IBackgroundTaskQueue<DocumentAnalysisMessage> analysisQueue,
+        ILogger<EscribaService> logger)
+    {
+        this.geminiClient = geminiClient;
+        this.dbContext = dbContext;
+        _analysisQueue = analysisQueue;
+        _logger = logger;
+    }
+
+    public async Task QueueDocumentAnalysis(int documentId, string userId)
+    {
+        var document = await dbContext.Documents.FindAsync(documentId) 
+            ?? throw new KeyNotFoundException($"Documento com ID {documentId} não encontrado.");
+
+        // Update status to queued
+        document.Status = DocumentStatus.Queued;
+        await dbContext.SaveChangesAsync();
+
+        // Queue the analysis
+        var message = new DocumentAnalysisMessage(documentId, userId, DateTime.UtcNow);
+        await _analysisQueue.QueueBackgroundWorkItemAsync(message);
+    }
+
+    public async Task ProcessDocumentAnalysisAsync(DocumentAnalysisMessage message)
+    {
+        var document = await dbContext.Documents.FindAsync(message.DocumentId);
+        if (document == null) return;
+
+        try
+        {
+            document.Status = DocumentStatus.AnalyzingContent;
+            await dbContext.SaveChangesAsync();
+
+            var analysis = new DocumentAnalysisDto
+            {
+                DocumentId = message.DocumentId,
+                TextExtracted = document.TextExtracted
+            };
+
+            var hasErrors = false;
+
+            // Process each analysis step independently
+            try
+            {
+                analysis.ExtractedEntities = await ExtractEntitiesAsync(message.DocumentId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error extracting entities for document {DocumentId}", message.DocumentId);
+                document.Status = DocumentStatus.EntitiesExtractionFailed;
+                hasErrors = true;
+            }
+
+            try
+            {
+                analysis.DetectedRisks = await DetectRisksAsync(message.DocumentId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error detecting risks for document {DocumentId}", message.DocumentId);
+                document.Status = DocumentStatus.RisksAnalysisFailed;
+                hasErrors = true;
+            }
+
+            try
+            {
+                analysis.GeneratedInsights = await GenerateInsightsAsync(message.DocumentId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error generating insights for document {DocumentId}", message.DocumentId);
+                document.Status = DocumentStatus.InsightsGenerationFailed;
+                hasErrors = true;
+            }
+
+            // Set final status based on overall result
+            document.Status = hasErrors ? DocumentStatus.PartiallyProcessed : DocumentStatus.Processed;
+            await dbContext.SaveChangesAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Critical error processing document {DocumentId}", message.DocumentId);
+            document.Status = DocumentStatus.Failed;
+            await dbContext.SaveChangesAsync();
+            throw;
+        }
+    }
 
     public async Task<DocumentAnalysisDto> AnalyzeDocument(int documentId)
     {
@@ -33,7 +134,6 @@ public class EscribaService(OpenAIClient openAIClient, ScriptoryumDbContext dbCo
             TextExtracted = document.TextExtracted,
             ExtractedEntities = await ExtractEntitiesAsync(documentId),
             DetectedRisks = await DetectRisksAsync(documentId),
-            // TimelineEvents = await ExtractTimelineEventsAsync(documentId),
             GeneratedInsights = await GenerateInsightsAsync(documentId)
         };
 
@@ -42,7 +142,6 @@ public class EscribaService(OpenAIClient openAIClient, ScriptoryumDbContext dbCo
 
     public async Task<List<RiskDetectedDto>> DetectRisksAsync(int documentId)
     {
-        // Buscar documento do banco
         var document = await dbContext.Documents.FindAsync(documentId) ?? throw new KeyNotFoundException($"Documento com ID {documentId} não encontrado.");
 
         var systemPrompt = "Você é um assistente jurídico especializado em análise de documentos. Identifique todos os riscos presentes no texto fornecido. Para cada risco, forneça: descrição, nível de risco (Low, Medium, High, Critical), trecho do texto que evidencia o risco e um score de confiança (0-1). Responda em JSON com a estrutura: [{ \"Description\": \"...\", \"RiskLevel\": \"...\", \"ConfidenceScore\": 0.95, \"EvidenceExcerpt\": \"...\" }]";
@@ -51,14 +150,13 @@ public class EscribaService(OpenAIClient openAIClient, ScriptoryumDbContext dbCo
         var allRisks = new List<RiskDetectedDto>();
         var now = DateTime.UtcNow;
 
-        // Usar transaction scope para garantir consistência
         using var transaction = await dbContext.Database.BeginTransactionAsync();
 
         try
         {
             foreach (var chunk in chunks)
             {
-                var response = await openAIClient.SendMessageAsync(chunk, systemPrompt);
+                var response = await geminiClient.SendMessageAsync(chunk, systemPrompt, "gemini-1.5-flash");
 
                 List<RiskDetectedDto> risksChunk;
                 try
@@ -72,7 +170,6 @@ public class EscribaService(OpenAIClient openAIClient, ScriptoryumDbContext dbCo
 
                 if (risksChunk?.Any() != true) continue;
 
-                // Salvar riscos do chunk atual
                 foreach (var risk in risksChunk)
                 {
                     var entity = new Domain.Entities.RiskDetected
@@ -88,7 +185,6 @@ public class EscribaService(OpenAIClient openAIClient, ScriptoryumDbContext dbCo
                     dbContext.RisksDetected.Add(entity);
                     await dbContext.SaveChangesAsync();
 
-                    // Atualizar DTO com ID gerado
                     risk.Id = entity.Id;
                     risk.DetectedAt = entity.DetectedAt;
 
@@ -96,10 +192,8 @@ public class EscribaService(OpenAIClient openAIClient, ScriptoryumDbContext dbCo
                 }
             }
 
-            // Commit da transação após processar todos os chunks com sucesso
             await transaction.CommitAsync();
 
-            // Deduplicar riscos por Description + EvidenceExcerpt
             var uniqueRisks = allRisks
                 .GroupBy(r => (r.Description?.Trim() ?? "") + "|" + (r.EvidenceExcerpt?.Trim() ?? ""))
                 .Select(g => g.First())
@@ -109,7 +203,6 @@ public class EscribaService(OpenAIClient openAIClient, ScriptoryumDbContext dbCo
         }
         catch
         {
-            // Rollback em caso de erro
             await transaction.RollbackAsync();
             throw;
         }
@@ -130,7 +223,7 @@ public class EscribaService(OpenAIClient openAIClient, ScriptoryumDbContext dbCo
         {
             foreach (var chunk in chunks)
             {
-                var response = await openAIClient.SendMessageAsync(chunk, systemPrompt);
+                var response = await geminiClient.SendMessageAsync(chunk, systemPrompt, "gemini-1.5-flash");
 
                 List<ExtractedEntityDto> entitiesChunk;
                 try
@@ -165,7 +258,6 @@ public class EscribaService(OpenAIClient openAIClient, ScriptoryumDbContext dbCo
 
             await transaction.CommitAsync();
 
-            // Deduplicar por Value + EntityType
             var uniqueEntities = allEntities
                 .GroupBy(e => (e.Value?.Trim() ?? "") + "|" + e.EntityType)
                 .Select(g => g.First())
@@ -192,17 +284,14 @@ public class EscribaService(OpenAIClient openAIClient, ScriptoryumDbContext dbCo
 
         foreach (var chunk in chunks)
         {
-            var response = await openAIClient.SendMessageAsync(chunk, systemPrompt);
+            var response = await geminiClient.SendMessageAsync(chunk, systemPrompt, "gemini-1.5-flash");
 
-            // Verifica se a resposta indica ausência de eventos ou não é JSON
             if (string.IsNullOrWhiteSpace(response) ||
                 (!response.TrimStart().StartsWith("[") && !response.TrimStart().StartsWith("{")) ||
                 response.Contains("não contém eventos", StringComparison.OrdinalIgnoreCase) ||
                 response.Contains("não há eventos", StringComparison.OrdinalIgnoreCase) ||
                 response.Contains("não menciona datas ou eventos", StringComparison.OrdinalIgnoreCase))
             {
-                // Opcional: logar resposta ignorada
-                // Console.WriteLine($"[TimelineEvents] Ignored response: {response}");
                 continue;
             }
 
@@ -213,23 +302,16 @@ public class EscribaService(OpenAIClient openAIClient, ScriptoryumDbContext dbCo
             }
             catch
             {
-                // Opcional: logar erro de desserialização
-                // Console.WriteLine($"[TimelineEvents] JSON error: {response}");
                 continue;
             }
             if (eventsChunk != null)
                 allEvents.AddRange(eventsChunk);
         }
 
-        // Deduplicar por Description + EventDate
         var uniqueEvents = allEvents
             .GroupBy(e => (e.Description?.Trim() ?? "") + "|" + e.EventDate.ToString("o"))
             .Select(g => g.First())
             .ToList();
-
-        // Persistir no banco (se houver tabela/entidade para eventos extraídos)
-        // Exemplo: dbContext.TimelineEvents.Add(entity); await dbContext.SaveChangesAsync();
-        // Se não houver persistência, apenas retorna os DTOs
 
         return uniqueEvents;
     }
@@ -249,7 +331,7 @@ public class EscribaService(OpenAIClient openAIClient, ScriptoryumDbContext dbCo
         {
             foreach (var chunk in chunks)
             {
-                var response = await openAIClient.SendMessageAsync(chunk, systemPrompt);
+                var response = await geminiClient.SendMessageAsync(chunk, systemPrompt, "gemini-1.5-flash");
 
                 List<InsightDto> insightsChunk;
                 try
@@ -283,7 +365,6 @@ public class EscribaService(OpenAIClient openAIClient, ScriptoryumDbContext dbCo
 
             await transaction.CommitAsync();
 
-            // Deduplicar por Description + Category
             var uniqueInsights = allInsights
                 .GroupBy(i => (i.Description?.Trim() ?? "") + "|" + i.Category.ToString())
                 .Select(g => g.First())

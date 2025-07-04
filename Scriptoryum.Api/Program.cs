@@ -3,10 +3,12 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Scriptoryum.Api.Application.Models;
 using Scriptoryum.Api.Application.Services;
+using Scriptoryum.Api.Application.Utils;
 using Scriptoryum.Api.Domain.Entities;
 using Scriptoryum.Api.Infrastructure.Clients;
-using Scriptoryum.Api.Infrastructure.Clients.OpenAI;
+using Scriptoryum.Api.Infrastructure.Clients.Gemini;
 using Scriptoryum.Api.Infrastructure.Configuration;
 using Scriptoryum.Api.Infrastructure.Context;
 using Scriptoryum.Api.Infrastructure.HealthChecks;
@@ -53,17 +55,17 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 
 builder.Services.AddScoped<IEscribaService, EscribaService>();
 
-// Register OpenAI client
+// Register Gemini client
 builder.Services.AddScoped(provider =>
 {
     var configuration = provider.GetRequiredService<IConfiguration>();
-    
-    var apiKey = configuration["OpenAI:ApiKey"];
-    
+
+    var apiKey = configuration["Gemini:ApiKey"];
+
     if (string.IsNullOrWhiteSpace(apiKey))
-        throw new InvalidOperationException("OpenAI API key is not configured. Please set OpenAI:ApiKey in your configuration.");
-    
-    return new OpenAIClient(apiKey);
+        throw new InvalidOperationException("Api Key do Gemini não está configurada.");
+
+    return new GeminiClient(apiKey);
 });
 
 // Configure Cloudflare R2 options
@@ -77,37 +79,37 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(provider =>
 {
     var connectionString = builder.Configuration.GetConnectionString("Redis") ?? "localhost:6379";
     var configurationOptions = ConfigurationOptions.Parse(connectionString);
-    
+
     // Configure resilient connection settings
     configurationOptions.AbortOnConnectFail = false;
     configurationOptions.ConnectRetry = 3;
     configurationOptions.ConnectTimeout = 5000;
     configurationOptions.SyncTimeout = 5000;
-    
+
     var logger = provider.GetRequiredService<ILogger<Program>>();
-    
+
     try
     {
         var multiplexer = ConnectionMultiplexer.Connect(configurationOptions);
-        
+
         // Log connection events
         multiplexer.ConnectionFailed += (sender, e) =>
         {
             logger.LogError("Redis connection failed: {Exception}", e.Exception?.Message);
         };
-        
+
         multiplexer.ConnectionRestored += (sender, e) =>
         {
             logger.LogInformation("Redis connection restored");
         };
-        
+
         logger.LogInformation("Redis connection established successfully");
         return multiplexer;
     }
     catch (Exception ex)
     {
         logger.LogWarning("Failed to connect to Redis: {Message}. Application will continue without Redis.", ex.Message);
-        
+
         // Return a null multiplexer that can be handled gracefully
         return null;
     }
@@ -118,6 +120,10 @@ builder.Services.AddScoped<IRedisQueueService, RedisQueueService>();
 
 //// Register Document Processor Service
 //builder.Services.AddScoped<IDocumentProcessorService, DocumentProcessorService>();
+
+// Register the background task queue and background service
+builder.Services.AddSingleton<IBackgroundTaskQueue<DocumentAnalysisMessage>, BackgroundTaskQueue<DocumentAnalysisMessage>>();
+builder.Services.AddHostedService<Scriptoryum.Api.Application.BackgroundServices.DocumentAnalysisBackgroundService>();
 
 // Add Health Checks
 builder.Services.AddHealthChecks()
@@ -185,33 +191,33 @@ builder.Services.AddCors(options =>
 // Configure Swagger/OpenAPI
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new OpenApiInfo 
-    { 
-        Title = "Scriptoryum API", 
+    c.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "Scriptoryum API",
         Version = "v1",
-        Description = "API para gerenciamento de documentos e anÃ¡lise de dados do Scriptoryum",
+        Description = "API para gerenciamento de documentos e análise de dados do Scriptoryum",
         Contact = new OpenApiContact
         {
             Name = "Scriptoryum Team",
             Email = "contato@scriptoryum.com"
         }
     });
-    
+
     // Enable annotations for better documentation
     c.EnableAnnotations();
-    
+
     // Configure JWT Authentication for Swagger
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Description = "JWT Authorization header usando o esquema Bearer. \r\n\r\n" +
-                      "Digite 'Bearer' [espaÃ§o] e entÃ£o seu token na entrada de texto abaixo.\r\n\r\n" +
+                      "Digite 'Bearer' [espaço] e então seu token na entrada de texto abaixo.\r\n\r\n" +
                       "Exemplo: \"Bearer 12345abcdef\"",
         Name = "Authorization",
         In = ParameterLocation.Header,
         Type = SecuritySchemeType.ApiKey,
         Scheme = "Bearer"
     });
-    
+
     c.AddSecurityRequirement(new OpenApiSecurityRequirement()
     {
         {
@@ -236,12 +242,12 @@ var app = builder.Build();
 // Configure the HTTP request pipeline.
 //if (app.Environment.IsDevelopment())
 //{
-    app.UseSwagger();
-    app.UseSwaggerUI(c =>
-    {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Scriptoryum API V1");
-        c.RoutePrefix = "swagger";
-    });
+app.UseSwagger();
+app.UseSwaggerUI(c =>
+{
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Scriptoryum API V1");
+    c.RoutePrefix = "swagger";
+});
 //}
 
 app.UseHttpsRedirection();

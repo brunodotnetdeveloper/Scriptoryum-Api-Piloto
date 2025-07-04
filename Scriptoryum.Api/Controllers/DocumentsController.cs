@@ -68,13 +68,29 @@ public class DocumentsController(IDocumentsService documentsService, IEscribaSer
     }
 
     [HttpGet("{id}/analyze-document")]
-    public async Task<ActionResult<List<RiskDetectedDto>>> AnalyzeDocument(int id)
+    [SwaggerOperation(Summary = "Inicia análise assíncrona do documento", Description = "Inicia o processamento em background e retorna imediatamente")]
+    [SwaggerResponse(202, "Análise iniciada com sucesso")]
+    [SwaggerResponse(404, "Documento não encontrado")]
+    [SwaggerResponse(401, "Não autorizado")]
+    [SwaggerResponse(500, "Erro interno do servidor")]
+    public async Task<IActionResult> AnalyzeDocument(int id)
     {
         try
         {
-            var analysis = await escribaService.AnalyzeDocument(id);
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized("Usuário não identificado");
+            }
 
-            return Ok(analysis);
+            await escribaService.QueueDocumentAnalysis(id, userId);
+
+            return Accepted(new
+            {
+                message = "Análise iniciada. O processamento está ocorrendo em background.",
+                documentId = id,
+                statusEndpoint = $"/api/documents/{id}/details"
+            });
         }
         catch (KeyNotFoundException ex)
         {
@@ -82,7 +98,7 @@ public class DocumentsController(IDocumentsService documentsService, IEscribaSer
         }
         catch (Exception ex)
         {
-            return StatusCode(500, "Erro interno do servidor: " + ex.Message);
+            return StatusCode(500, "Erro ao iniciar análise: " + ex.Message);
         }
     }
 }
