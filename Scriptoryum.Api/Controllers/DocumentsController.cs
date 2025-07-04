@@ -101,4 +101,26 @@ public class DocumentsController(IDocumentsService documentsService, IEscribaSer
             return StatusCode(500, "Erro ao iniciar análise: " + ex.Message);
         }
     }
+
+    /// Gera uma URL pré-assinada para download do documento
+    /// </summary>
+    [HttpGet("{id}/download-url")]
+    [SwaggerOperation(Summary = "Obter URL de download do documento", Description = "Gera uma URL pré-assinada para download do documento no Cloudflare R2")]
+    [SwaggerResponse(200, "URL de download gerada com sucesso", typeof(string))]
+    [SwaggerResponse(404, "Documento não encontrado")]
+    public async Task<IActionResult> GetDocumentDownloadUrl(int id)
+    {
+        var details = await documentsService.GetDocumentDetailsByIdAsync(id);
+        
+        if (details == null || string.IsNullOrEmpty(details.StoragePath))
+            return NotFound();
+
+        // 10 minutos de validade
+        var url = await documentsService.GetDocumentDownloadUrlAsync(details.StoragePath, TimeSpan.FromMinutes(10));
+        
+        if (string.IsNullOrEmpty(url))
+            return StatusCode(500, "Falha ao gerar URL de download");
+        
+        return Ok(new { url });
+    }
 }

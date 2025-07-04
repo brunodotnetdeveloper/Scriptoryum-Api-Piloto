@@ -11,10 +11,9 @@ namespace Scriptoryum.Api.Application.Services;
 public interface IDocumentsService
 {
     Task<IEnumerable<DocumentsDto>> GetDocumentsByUserAsync(string userId);
-    
     Task<UploadDocumentResponseDto> UploadDocumentAsync(UploadDocumentDto uploadDto, string userId);
-    
     Task<DocumentDetailsDto> GetDocumentDetailsByIdAsync(int id);
+    Task<string> GetDocumentDownloadUrlAsync(string storagePath, TimeSpan expiration);
 }
 
 public class DocumentsService(ScriptoryumDbContext context, ILogger<DocumentsService> logger, ICloudflareR2Client r2Client, IRedisQueueService redisQueueService) : IDocumentsService
@@ -149,6 +148,12 @@ public class DocumentsService(ScriptoryumDbContext context, ILogger<DocumentsSer
                 Message = "Erro interno do servidor ao processar o arquivo"
             };
         }
+    }
+
+    public async Task<string> GetDocumentDownloadUrlAsync(string storagePath, TimeSpan expiration)
+    {
+        if (string.IsNullOrEmpty(storagePath)) return null;
+        return await r2Client.GetPresignedUrlAsync(storagePath, expiration);
     }
 
     public async Task<DocumentDetailsDto> GetDocumentDetailsByIdAsync(int id)
