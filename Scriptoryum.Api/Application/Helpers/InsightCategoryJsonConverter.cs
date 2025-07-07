@@ -14,6 +14,8 @@ public class InsightCategoryJsonConverter : JsonConverter<InsightCategory>
             "risco" => InsightCategory.Risco,
             "oportunidade" => InsightCategory.Oportunidade,
             "alerta" => InsightCategory.Alerta,
+            "regulatory compliance" => InsightCategory.RegulatoryCompliance,
+            "regulatorycompliance" => InsightCategory.RegulatoryCompliance,
             "outro" => InsightCategory.Outro,
             _ => InsightCategory.Outro
         };

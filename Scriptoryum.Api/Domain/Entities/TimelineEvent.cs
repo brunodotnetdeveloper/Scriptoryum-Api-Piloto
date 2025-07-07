@@ -12,3 +12,15 @@ public class TimelineEvent: EntityBase
     public string Description { get; set; }
     public string SourceExcerpt { get; set; }
 }
+
+public enum TimelineEventType
+{
+    Creation,
+    Modification,
+    Deletion,
+    Aditivo,
+    Suspensão,
+    Cancelamento,
+    Prorrogação,
+    Transferência
+}

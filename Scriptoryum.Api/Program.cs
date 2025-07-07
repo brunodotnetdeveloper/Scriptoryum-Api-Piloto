@@ -3,12 +3,9 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using Scriptoryum.Api.Application.Models;
 using Scriptoryum.Api.Application.Services;
-using Scriptoryum.Api.Application.Utils;
 using Scriptoryum.Api.Domain.Entities;
 using Scriptoryum.Api.Infrastructure.Clients;
-using Scriptoryum.Api.Infrastructure.Clients.Gemini;
 using Scriptoryum.Api.Infrastructure.Configuration;
 using Scriptoryum.Api.Infrastructure.Context;
 using Scriptoryum.Api.Infrastructure.HealthChecks;
@@ -52,21 +49,6 @@ builder.Services.AddControllers();
 builder.Services.AddScoped<IDocumentsService, DocumentsService>();
 
 builder.Services.AddScoped<IAuthService, AuthService>();
-
-builder.Services.AddScoped<IEscribaService, EscribaService>();
-
-// Register Gemini client
-builder.Services.AddScoped(provider =>
-{
-    var configuration = provider.GetRequiredService<IConfiguration>();
-
-    var apiKey = configuration["Gemini:ApiKey"];
-
-    if (string.IsNullOrWhiteSpace(apiKey))
-        throw new InvalidOperationException("Api Key do Gemini não está configurada.");
-
-    return new GeminiClient(apiKey);
-});
 
 // Configure Cloudflare R2 options
 builder.Services.Configure<CloudflareR2Options>(builder.Configuration.GetSection(CloudflareR2Options.SectionName));
@@ -117,13 +99,6 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(provider =>
 
 // Register Redis Queue Service
 builder.Services.AddScoped<IRedisQueueService, RedisQueueService>();
-
-//// Register Document Processor Service
-//builder.Services.AddScoped<IDocumentProcessorService, DocumentProcessorService>();
-
-// Register the background task queue and background service
-builder.Services.AddSingleton<IBackgroundTaskQueue<DocumentAnalysisMessage>, BackgroundTaskQueue<DocumentAnalysisMessage>>();
-builder.Services.AddHostedService<Scriptoryum.Api.Application.BackgroundServices.DocumentAnalysisBackgroundService>();
 
 // Add Health Checks
 builder.Services.AddHealthChecks()

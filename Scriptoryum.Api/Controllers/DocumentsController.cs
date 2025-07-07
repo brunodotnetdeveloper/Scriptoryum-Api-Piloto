@@ -9,8 +9,8 @@ namespace Scriptoryum.Api.Controllers;
 
 [Route("api/documents")]
 [ApiController]
-[Authorize]
-public class DocumentsController(IDocumentsService documentsService, IEscribaService escribaService) : ControllerBase
+//[Authorize]
+public class DocumentsController(IDocumentsService documentsService) : ControllerBase
 {
 
     /// <summary>
@@ -65,41 +65,6 @@ public class DocumentsController(IDocumentsService documentsService, IEscribaSer
             return NotFound();
 
         return Ok(details);
-    }
-
-    [HttpGet("{id}/analyze-document")]
-    [SwaggerOperation(Summary = "Inicia análise assíncrona do documento", Description = "Inicia o processamento em background e retorna imediatamente")]
-    [SwaggerResponse(202, "Análise iniciada com sucesso")]
-    [SwaggerResponse(404, "Documento não encontrado")]
-    [SwaggerResponse(401, "Não autorizado")]
-    [SwaggerResponse(500, "Erro interno do servidor")]
-    public async Task<IActionResult> AnalyzeDocument(int id)
-    {
-        try
-        {
-            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userId))
-            {
-                return Unauthorized("Usuário não identificado");
-            }
-
-            await escribaService.QueueDocumentAnalysis(id, userId);
-
-            return Accepted(new
-            {
-                message = "Análise iniciada. O processamento está ocorrendo em background.",
-                documentId = id,
-                statusEndpoint = $"/api/documents/{id}/details"
-            });
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(ex.Message);
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, "Erro ao iniciar análise: " + ex.Message);
-        }
     }
 
     /// Gera uma URL pré-assinada para download do documento
