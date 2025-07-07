@@ -221,7 +221,7 @@ public class DocumentsService(ScriptoryumDbContext context, ILogger<DocumentsSer
         };
     }
 
-    private (bool IsValid, string ErrorMessage) ValidateFile(IFormFile file)
+    private static (bool IsValid, string ErrorMessage) ValidateFile(IFormFile file)
     {
         if (file == null || file.Length == 0)
             return (false, "Nenhum arquivo foi selecionado");

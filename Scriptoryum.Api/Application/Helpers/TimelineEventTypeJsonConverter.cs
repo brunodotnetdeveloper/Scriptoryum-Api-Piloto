@@ -9,7 +9,7 @@ public class TimelineEventTypeJsonConverter : JsonConverter<TimelineEventType>
     public override TimelineEventType Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         string value = reader.GetString();
-        if (string.IsNullOrEmpty(value)) return TimelineEventType.Other;
+        if (string.IsNullOrEmpty(value)) return TimelineEventType.Outro;
 
         // Try to parse ignoring case
         if (Enum.TryParse(value, true, out TimelineEventType result))
@@ -18,12 +18,12 @@ public class TimelineEventTypeJsonConverter : JsonConverter<TimelineEventType>
         // Handle special cases like accents and variations
         return value.ToLower() switch
         {
-            "audiência" or "audiencia" => TimelineEventType.Audience,
-            "sentença" or "sentenca" => TimelineEventType.Sentence,
-            "citação" or "citacao" => TimelineEventType.Quote,
-            "intimação" or "intimacao" => TimelineEventType.Summons,
-            "publicação" or "publicacao" => TimelineEventType.Publication,
-            _ => TimelineEventType.Other
+            "audiÃªncia" or "audiencia" => TimelineEventType.Audiencia,
+            "sentenÃ§a" or "sentenca" => TimelineEventType.Sentenca,
+            "citaÃ§Ã£o" or "citacao" => TimelineEventType.Citacao,
+            "intimaÃ§Ã£o" or "intimacao" => TimelineEventType.Citacao,
+            "publicaÃ§Ã£o" or "publicacao" => TimelineEventType.Publicacao,
+            _ => TimelineEventType.Outro
         };
     }
 
