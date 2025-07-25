@@ -6,6 +6,7 @@ public class Document : EntityBase
 {
     public string OriginalFileName { get; set; }
     public string ProcessedFileName { get; set; }
+    public string Summary { get; set; }
     public string Description { get; set; }
 
     public StorageProvider StorageProvider { get; set; }
