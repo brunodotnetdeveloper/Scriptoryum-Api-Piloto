@@ -50,6 +50,10 @@ builder.Services.AddScoped<IDocumentsService, DocumentsService>();
 
 builder.Services.AddScoped<IAuthService, AuthService>();
 
+// Register AI Configuration and Chat services
+builder.Services.AddScoped<IAIConfigService, AIConfigService>();
+builder.Services.AddScoped<IEscribaService, EscribaService>();
+
 // Configure Cloudflare R2 options
 builder.Services.Configure<CloudflareR2Options>(builder.Configuration.GetSection(CloudflareR2Options.SectionName));
 
@@ -170,7 +174,7 @@ builder.Services.AddSwaggerGen(c =>
     {
         Title = "Scriptoryum API",
         Version = "v1",
-        Description = "API para gerenciamento de documentos e análise de dados do Scriptoryum",
+        Description = "API para gerenciamento de documentos e anï¿½lise de dados do Scriptoryum",
         Contact = new OpenApiContact
         {
             Name = "Scriptoryum Team",
@@ -185,7 +189,7 @@ builder.Services.AddSwaggerGen(c =>
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Description = "JWT Authorization header usando o esquema Bearer. \r\n\r\n" +
-                      "Digite 'Bearer' [espaço] e então seu token na entrada de texto abaixo.\r\n\r\n" +
+                      "Digite 'Bearer' [espaï¿½o] e entï¿½o seu token na entrada de texto abaixo.\r\n\r\n" +
                       "Exemplo: \"Bearer 12345abcdef\"",
         Name = "Authorization",
         In = ParameterLocation.Header,

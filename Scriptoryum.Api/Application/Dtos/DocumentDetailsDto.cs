@@ -25,7 +25,7 @@ public class DocumentDetailsDto
 public class ExtractedEntityDto
 {
     public int Id { get; set; }
-    public EntityType EntityType { get; set; }
+    public string EntityType { get; set; }
     public string EntityTypeText { get; set; }
     public string Value { get; set; }
     public decimal ConfidenceScore { get; set; }
@@ -47,7 +47,7 @@ public class RiskDetectedDto
 public class InsightDto
 {
     public int Id { get; set; }
-    public InsightCategory Category { get; set; }
+    public string Category { get; set; }
     public string CategoryText { get; set; }
     public string Description { get; set; }
     public ImportanceLevel ImportanceLevel { get; set; }
@@ -58,7 +58,7 @@ public class TimelineEventDto
 {
     public int Id { get; set; }
     public DateTime EventDate { get; set; }
-    public TimelineEventType EventType { get; set; }
+    public string EventType { get; set; }
     public string Description { get; set; }
     public string SourceExcerpt { get; set; }
 }

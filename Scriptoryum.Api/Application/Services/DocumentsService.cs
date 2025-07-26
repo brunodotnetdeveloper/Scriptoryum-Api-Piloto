@@ -159,14 +159,33 @@ public class DocumentsService(ScriptoryumDbContext context, ILogger<DocumentsSer
 
     public async Task<DocumentDetailsDto> GetDocumentDetailsByIdAsync(int id)
     {
+        // Primeiro, carrega o documento
         var document = await context.Documents
-            .Include(d => d.ExtractedEntities)
-            .Include(d => d.RisksDetected)
-            .Include(d => d.Insights)
-            .Include(d => d.TimelineEvents)
+            .AsNoTracking()
             .FirstOrDefaultAsync(d => d.Id == id);
 
         if (document == null) return null;
+
+        // Depois carrega cada relacionamento sequencialmente
+        var entities = await context.ExtractedEntities
+            .AsNoTracking()
+            .Where(e => e.DocumentId == id)
+            .ToListAsync();
+
+        var risks = await context.RisksDetected
+            .AsNoTracking()
+            .Where(r => r.DocumentId == id)
+            .ToListAsync();
+
+        var insights = await context.Insights
+            .AsNoTracking()
+            .Where(i => i.DocumentId == id)
+            .ToListAsync();
+
+        var timeline = await context.TimelineEvents
+            .AsNoTracking()
+            .Where(t => t.DocumentId == id)
+            .ToListAsync();
 
         return new DocumentDetailsDto
         {
@@ -181,7 +200,8 @@ public class DocumentsService(ScriptoryumDbContext context, ILogger<DocumentsSer
             UploadedAt = document.UploadedAt,
             UploadedByUserId = document.UploadedByUserId,
             TextExtracted = document.TextExtracted,
-            ExtractedEntities = document.ExtractedEntities.Select(e => new ExtractedEntityDto
+
+            ExtractedEntities = entities.Select(e => new ExtractedEntityDto
             {
                 Id = e.Id,
                 EntityType = e.EntityType,
@@ -192,7 +212,8 @@ public class DocumentsService(ScriptoryumDbContext context, ILogger<DocumentsSer
                 StartPosition = e.StartPosition,
                 EndPosition = e.EndPosition
             }).ToList(),
-            RisksDetected = document.RisksDetected.Select(r => new RiskDetectedDto
+
+            RisksDetected = risks.Select(r => new RiskDetectedDto
             {
                 Id = r.Id,
                 Description = r.Description,
@@ -201,7 +222,8 @@ public class DocumentsService(ScriptoryumDbContext context, ILogger<DocumentsSer
                 EvidenceExcerpt = r.EvidenceExcerpt,
                 DetectedAt = r.DetectedAt
             }).ToList(),
-            Insights = document.Insights.Select(i => new InsightDto
+
+            Insights = insights.Select(i => new InsightDto
             {
                 Id = i.Id,
                 Category = i.Category,
@@ -210,7 +232,8 @@ public class DocumentsService(ScriptoryumDbContext context, ILogger<DocumentsSer
                 ImportanceLevel = i.ImportanceLevel,
                 ExtractedText = i.ExtractedText
             }).ToList(),
-            TimelineEvents = document.TimelineEvents.Select(t => new TimelineEventDto
+
+            TimelineEvents = timeline.Select(t => new TimelineEventDto
             {
                 Id = t.Id,
                 EventDate = t.EventDate,

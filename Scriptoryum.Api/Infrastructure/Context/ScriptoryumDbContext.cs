@@ -13,6 +13,14 @@ public class ScriptoryumDbContext(DbContextOptions<ScriptoryumDbContext> options
     public DbSet<Insight> Insights { get; set; }
     public DbSet<RiskDetected> RisksDetected { get; set; }
     public DbSet<TimelineEvent> TimelineEvents { get; set; }
+    
+    // Chat System
+    public DbSet<ChatSession> ChatSessions { get; set; }
+    public DbSet<ChatMessage> ChatMessages { get; set; }
+    
+    // AI Configuration
+    public DbSet<AIConfiguration> AIConfigurations { get; set; }
+    public DbSet<AIProviderConfig> AIProviderConfigs { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -58,8 +66,7 @@ public class ScriptoryumDbContext(DbContextOptions<ScriptoryumDbContext> options
                 .IsRequired()
                 .HasMaxLength(500);
 
-            entity.Property(d => d.Summary)
-                .IsRequired();
+            entity.Property(d => d.Summary);
 
             entity.Property(d => d.OriginalFileName)
                 .IsRequired()
@@ -203,6 +210,145 @@ public class ScriptoryumDbContext(DbContextOptions<ScriptoryumDbContext> options
             entity.HasOne(t => t.Document)
                 .WithMany(d => d.TimelineEvents)
                 .HasForeignKey(t => t.DocumentId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Configure ChatSession
+        builder.Entity<ChatSession>(entity =>
+        {
+            entity.HasKey(cs => cs.Id);
+            
+            entity.Property(cs => cs.Title)
+                .IsRequired()
+                .HasMaxLength(200);
+            
+            entity.Property(cs => cs.Description)
+                .HasMaxLength(500);
+            
+            entity.Property(cs => cs.MessageCount)
+                .HasDefaultValue(0);
+            
+            entity.Property(cs => cs.LastActivityAt)
+                .HasDefaultValueSql("NOW()");
+
+            // Relationship with ApplicationUser
+            entity.HasOne(cs => cs.User)
+                .WithMany(u => u.ChatSessions)
+                .HasForeignKey(cs => cs.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Relationship with Document (optional)
+            entity.HasOne(cs => cs.Document)
+                .WithMany()
+                .HasForeignKey(cs => cs.DocumentId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // Configure ChatMessage
+        builder.Entity<ChatMessage>(entity =>
+        {
+            entity.HasKey(cm => cm.Id);
+            
+            entity.Property(cm => cm.Role)
+                .IsRequired()
+                .HasConversion<string>();
+            
+            entity.Property(cm => cm.Content)
+                .IsRequired();
+            
+            entity.Property(cm => cm.DocumentName)
+                .HasMaxLength(500);
+            
+            entity.Property(cm => cm.Cost)
+                .HasPrecision(10, 6);
+            
+            entity.Property(cm => cm.AIProvider)
+                .HasConversion<string>();
+            
+            entity.Property(cm => cm.ModelUsed)
+                .HasMaxLength(100);
+
+            // Relationship with ChatSession
+            entity.HasOne(cm => cm.ChatSession)
+                .WithMany(cs => cs.Messages)
+                .HasForeignKey(cm => cm.ChatSessionId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Relationship with Document (optional)
+            entity.HasOne(cm => cm.Document)
+                .WithMany()
+                .HasForeignKey(cm => cm.DocumentId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // Configure AIConfiguration
+        builder.Entity<AIConfiguration>(entity =>
+        {
+            entity.HasKey(ai => ai.Id);
+            
+            entity.Property(ai => ai.DefaultProvider)
+                .IsRequired()
+                .HasConversion<string>();
+            
+            entity.Property(ai => ai.OpenAIApiKey)
+                .HasMaxLength(200);
+            
+            entity.Property(ai => ai.OpenAIModel)
+                .HasMaxLength(100);
+            
+            entity.Property(ai => ai.ClaudeApiKey)
+                .HasMaxLength(200);
+            
+            entity.Property(ai => ai.ClaudeModel)
+                .HasMaxLength(100);
+            
+            entity.Property(ai => ai.GeminiApiKey)
+                .HasMaxLength(200);
+            
+            entity.Property(ai => ai.GeminiModel)
+                .HasMaxLength(100);
+            
+            entity.Property(ai => ai.MaxTokens)
+                .HasDefaultValue(4000);
+            
+            entity.Property(ai => ai.Temperature)
+                .HasPrecision(3, 2)
+                .HasDefaultValue(0.7m);
+
+            // Relationship with ApplicationUser (one-to-one)
+            entity.HasOne(ai => ai.User)
+                .WithOne(u => u.AIConfiguration)
+                .HasForeignKey<AIConfiguration>(ai => ai.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Configure AIProviderConfig
+        builder.Entity<AIProviderConfig>(entity =>
+        {
+            entity.HasKey(apc => apc.Id);
+            
+            entity.Property(apc => apc.Provider)
+                .IsRequired()
+                .HasConversion<string>();
+            
+            entity.Property(apc => apc.ApiKey)
+                .IsRequired()
+                .HasMaxLength(200);
+            
+            entity.Property(apc => apc.SelectedModel)
+                .IsRequired()
+                .HasMaxLength(100);
+            
+            entity.Property(apc => apc.IsEnabled)
+                .HasDefaultValue(true);
+            
+            entity.Property(apc => apc.LastTestMessage)
+                .HasMaxLength(500);
+
+            // Relationship with AIConfiguration (many-to-one)
+            entity.HasOne(apc => apc.AIConfiguration)
+                .WithMany(ai => ai.AIProviderConfigs)
+                .HasForeignKey(apc => apc.AIConfigurationId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
