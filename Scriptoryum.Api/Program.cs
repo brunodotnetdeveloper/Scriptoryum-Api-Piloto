@@ -160,7 +160,8 @@ builder.Services.AddCors(options =>
         policy.WithOrigins(
                 "https://app.scriptoryum.com.br",
                 "http://localhost:8080",
-                "https://localhost:8080"
+                "https://localhost:8080",
+                "https://localhost:5173"
             )
             .AllowAnyHeader()
             .AllowAnyMethod();
