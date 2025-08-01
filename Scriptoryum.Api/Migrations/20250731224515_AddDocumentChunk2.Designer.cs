@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Pgvector;
@@ -12,9 +13,11 @@ using Scriptoryum.Api.Infrastructure.Context;
 namespace Scriptoryum.Api.Migrations
 {
     [DbContext(typeof(ScriptoryumDbContext))]
-    partial class ScriptoryumDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250731224515_AddDocumentChunk2")]
+    partial class AddDocumentChunk2
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -683,7 +686,7 @@ namespace Scriptoryum.Api.Migrations
                         .HasColumnName("document_id");
 
                     b.Property<Vector>("Embedding")
-                        .HasColumnType("vector(768)")
+                        .HasColumnType("vector(1536)")
                         .HasColumnName("embedding");
 
                     b.HasKey("Id");

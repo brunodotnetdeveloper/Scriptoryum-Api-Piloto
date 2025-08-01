@@ -2,9 +2,9 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
-using Pgvector;
 using Scriptoryum.Api.Infrastructure.Context;
 
 #nullable disable
@@ -12,9 +12,11 @@ using Scriptoryum.Api.Infrastructure.Context;
 namespace Scriptoryum.Api.Migrations
 {
     [DbContext(typeof(ScriptoryumDbContext))]
-    partial class ScriptoryumDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250731223742_AddDocumentChunk")]
+    partial class AddDocumentChunk
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -657,47 +659,6 @@ namespace Scriptoryum.Api.Migrations
                     b.ToTable("documents");
                 });
 
-            modelBuilder.Entity("Scriptoryum.Api.Domain.Entities.DocumentChunk", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("ChunkIndex")
-                        .HasColumnType("integer")
-                        .HasColumnName("chunk_index");
-
-                    b.Property<string>("Content")
-                        .HasColumnType("text")
-                        .HasColumnName("content");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<int>("DocumentId")
-                        .HasColumnType("integer")
-                        .HasColumnName("document_id");
-
-                    b.Property<Vector>("Embedding")
-                        .HasColumnType("vector(768)")
-                        .HasColumnName("embedding");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("DocumentId");
-
-                    b.HasIndex("Embedding");
-
-                    NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("Embedding"), "ivfflat");
-                    NpgsqlIndexBuilderExtensions.HasOperators(b.HasIndex("Embedding"), new[] { "vector_l2_ops" });
-
-                    b.ToTable("document_chunks", "public");
-                });
-
             modelBuilder.Entity("Scriptoryum.Api.Domain.Entities.ExtractedEntity", b =>
                 {
                     b.Property<int>("Id")
@@ -1059,17 +1020,6 @@ namespace Scriptoryum.Api.Migrations
                         .HasConstraintName("f_k_documents_asp_net_users_uploaded_by_user_id");
 
                     b.Navigation("UploadedByUser");
-                });
-
-            modelBuilder.Entity("Scriptoryum.Api.Domain.Entities.DocumentChunk", b =>
-                {
-                    b.HasOne("Scriptoryum.Api.Domain.Entities.Document", "Document")
-                        .WithMany()
-                        .HasForeignKey("DocumentId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Document");
                 });
 
             modelBuilder.Entity("Scriptoryum.Api.Domain.Entities.ExtractedEntity", b =>

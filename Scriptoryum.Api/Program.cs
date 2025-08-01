@@ -17,7 +17,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Configure PostgreSQL DbContext
 builder.Services.AddDbContext<ScriptoryumDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"), o => o.UseVector()));
 
 // Configure Identity
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Scriptoryum.Api.Domain.Entities;
 using Scriptoryum.Api.Domain.Enums;
+using System.Reflection.Emit;
 
 namespace Scriptoryum.Api.Infrastructure.Context;
 
@@ -57,6 +58,8 @@ public class ScriptoryumDbContext(DbContextOptions<ScriptoryumDbContext> options
             }
         }
 
+        builder.HasPostgresExtension("vector"); 
+
         // Configure Document entity
         builder.Entity<Document>(entity =>
         {
@@ -107,6 +110,39 @@ public class ScriptoryumDbContext(DbContextOptions<ScriptoryumDbContext> options
                 .HasForeignKey(d => d.UploadedByUserId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
+
+        builder.Entity<DocumentChunk>(entity =>
+        {
+            entity.ToTable("document_chunks", "public");
+
+            entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.Id).HasColumnName("id");
+
+            entity.Property(e => e.DocumentId).HasColumnName("document_id");
+
+            entity.Property(e => e.ChunkIndex).HasColumnName("chunk_index");
+
+            entity.Property(e => e.Content).HasColumnName("content");
+
+            // Aqui diz que a coluna é do tipo vetor com dimensão 1536
+            entity.Property(e => e.Embedding)
+                  .HasColumnType("vector(768)")
+                  .HasColumnName("embedding");
+
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at");
+
+            // Foreign key para Document (ajuste conforme seu modelo)
+            entity.HasOne(e => e.Document)
+                  .WithMany()
+                  .HasForeignKey(e => e.DocumentId);
+
+            // Opcional: index para busca vetorial (ivfflat)
+            entity.HasIndex(e => e.Embedding)
+                  .HasMethod("ivfflat")
+                  .HasOperators("vector_l2_ops");
+        });
+
 
         // Configure ExtractedEntity
         builder.Entity<ExtractedEntity>(entity =>
