@@ -10,6 +10,10 @@ public enum DocumentStatus
     TextExtractionFailed,
     ContentAnalysisFailed,
     Failed,
-    Cancelled,
+    Cancelled,    
+    PartiallyProcessed,
+    EntitiesExtractionFailed,
+    RisksAnalysisFailed,
+    InsightsGenerationFailed,
     Analyzed
 }
