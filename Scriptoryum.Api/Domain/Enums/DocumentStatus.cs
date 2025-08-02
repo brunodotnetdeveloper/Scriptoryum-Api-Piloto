@@ -11,9 +11,5 @@ public enum DocumentStatus
     ContentAnalysisFailed,
     Failed,
     Cancelled,
-    // New statuses for partial failures
-    PartiallyProcessed,
-    EntitiesExtractionFailed,
-    RisksAnalysisFailed,
-    InsightsGenerationFailed
+    Analyzed
 }
