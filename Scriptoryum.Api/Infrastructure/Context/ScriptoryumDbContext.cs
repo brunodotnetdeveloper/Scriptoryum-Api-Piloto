@@ -104,6 +104,8 @@ public class ScriptoryumDbContext(DbContextOptions<ScriptoryumDbContext> options
 
             entity.Property(d => d.TextExtracted);
 
+            entity.Property(d => d.ProcessingStartedAt);
+
             // Relationship with ApplicationUser
             entity.HasOne(d => d.UploadedByUser)
                 .WithMany(u => u.Documents)

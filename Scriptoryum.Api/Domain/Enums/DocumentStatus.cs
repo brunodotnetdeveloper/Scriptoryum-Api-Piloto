@@ -4,6 +4,7 @@ public enum DocumentStatus
 {
     Uploaded,
     Queued,
+    Pending,
     ExtractingText,
     AnalyzingContent,
     Processed,

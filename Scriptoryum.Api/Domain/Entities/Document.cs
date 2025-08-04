@@ -22,6 +22,8 @@ public class Document : EntityBase
 
     public string TextExtracted { get; set; }
 
+    public DateTime? ProcessingStartedAt { get; set; }
+
     public ICollection<ExtractedEntity> ExtractedEntities { get; set; } = [];
 
     public ICollection<Insight> Insights { get; set; } = [];
