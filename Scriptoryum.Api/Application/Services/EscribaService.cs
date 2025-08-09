@@ -3,6 +3,7 @@ using Scriptoryum.Api.Application.Dtos;
 using Scriptoryum.Api.Domain.Entities;
 using Scriptoryum.Api.Domain.Enums;
 using Scriptoryum.Api.Infrastructure.Context;
+using Scriptoryum.Api.Infrastructure.Services;
 
 namespace Scriptoryum.Api.Application.Services;
 
@@ -26,11 +27,19 @@ public class EscribaService : IEscribaService
 {
     private readonly ScriptoryumDbContext _context;
     private readonly ILogger<EscribaService> _logger;
+    private readonly IOpenAIService _openAIService;
+    private readonly IRagService _ragService;
 
-    public EscribaService(ScriptoryumDbContext context, ILogger<EscribaService> logger)
+    public EscribaService(
+        ScriptoryumDbContext context, 
+        ILogger<EscribaService> logger,
+        IOpenAIService openAIService,
+        IRagService ragService)
     {
         _context = context;
         _logger = logger;
+        _openAIService = openAIService;
+        _ragService = ragService;
     }
 
     public async Task<ChatSessionsResponseDto> GetChatSessionsAsync(string userId)
@@ -303,7 +312,7 @@ public class EscribaService : IEscribaService
             _context.ChatMessages.Add(userMessage);
 
             // Simular resposta do assistente
-            var assistantResponse = await GenerateAssistantResponseAsync(messageDto.Message, messageDto.Context);
+            var assistantResponse = await GenerateAssistantResponseAsync(messageDto.Message, messageDto.Context, userId, messageDto.DocumentId);
             
             var assistantMessage = new ChatMessage
             {
@@ -601,35 +610,160 @@ public class EscribaService : IEscribaService
         return document;
     }
 
-    private async Task<(string Response, List<string>? Suggestions, int? TokenCount, decimal? Cost, AIProvider? AIProvider, string? ModelUsed, int? ResponseTimeMs)> GenerateAssistantResponseAsync(string message, string? context)
+    private async Task<(string Response, List<string>? Suggestions, int? TokenCount, decimal? Cost, AIProvider? AIProvider, string? ModelUsed, int? ResponseTimeMs)> GenerateAssistantResponseAsync(string message, string? context, string userId, int? documentId = null)
     {
-        // Simular processamento da IA
-        await Task.Delay(Random.Shared.Next(1000, 3000));
-
-        var responses = new[]
+        try
         {
-            "Entendo sua pergunta. Com base no contexto fornecido, posso ajudá-lo com essa análise.",
-            "Essa é uma questão interessante. Vou analisar os dados disponíveis para fornecer uma resposta completa.",
-            "Com base no documento selecionado, posso identificar alguns pontos importantes para sua consulta.",
-            "Analisando o conteúdo, encontrei informações relevantes que podem responder sua pergunta."
-        };
+            _logger.LogInformation("Gerando resposta do assistente para usuário {UserId}", userId);
 
-        var suggestions = new List<string>
+            // Obter configuração de IA do usuário
+            var aiConfig = await _context.AIConfigurations
+                .Include(c => c.AIProviderConfigs)
+                .FirstOrDefaultAsync(c => c.UserId == userId);
+
+            if (aiConfig == null)
+            {
+                _logger.LogWarning("Configuração de IA não encontrada para usuário {UserId}", userId);
+                return (
+                    Response: "Desculpe, não foi possível processar sua solicitação. Configure sua API key nas configurações.",
+                    Suggestions: null,
+                    TokenCount: 0,
+                    Cost: 0m,
+                    AIProvider: null,
+                    ModelUsed: null,
+                    ResponseTimeMs: 0
+                );
+            }
+
+            // Obter configuração do provedor ativo (OpenAI)
+            var openAIConfig = aiConfig.AIProviderConfigs
+                .FirstOrDefault(p => p.Provider == AIProvider.OpenAI.ToString() && p.IsEnabled);
+
+            if (openAIConfig == null || string.IsNullOrEmpty(openAIConfig.ApiKey))
+            {
+                _logger.LogWarning("Configuração OpenAI não encontrada ou inválida para usuário {UserId}", userId);
+                return (
+                    Response: "Desculpe, não foi possível processar sua solicitação. Configure sua API key do OpenAI nas configurações.",
+                    Suggestions: null,
+                    TokenCount: 0,
+                    Cost: 0m,
+                    AIProvider: AIProvider.OpenAI,
+                    ModelUsed: null,
+                    ResponseTimeMs: 0
+                );
+            }
+
+            // Obter contexto relevante usando RAG
+            var ragContext = await _ragService.GetRelevantContextAsync(message, userId, documentId, 5);
+            
+            // Combinar contexto fornecido com contexto RAG
+            var finalContext = context;
+            if (!string.IsNullOrEmpty(ragContext.Context))
+            {
+                finalContext = string.IsNullOrEmpty(context) 
+                    ? ragContext.Context 
+                    : $"{context}\n\n--- Contexto Adicional ---\n{ragContext.Context}";
+            }
+
+            // Preparar requisição para OpenAI
+            var openAIRequest = new OpenAIRequest
+            {
+                Message = message,
+                Context = finalContext,
+                Model = openAIConfig.SelectedModel ?? "gpt-4o-mini",
+                Temperature = 0.7f,
+                MaxTokens = 4000,
+                ApiKey = openAIConfig.ApiKey
+            };
+
+            // Chamar OpenAI
+            var openAIResponse = await _openAIService.GenerateResponseAsync(openAIRequest);
+
+            if (!openAIResponse.Success)
+            {
+                _logger.LogError("Erro na resposta da OpenAI: {Error}", openAIResponse.ErrorMessage);
+                return (
+                    Response: "Desculpe, ocorreu um erro ao processar sua solicitação. Tente novamente.",
+                    Suggestions: null,
+                    TokenCount: 0,
+                    Cost: 0m,
+                    AIProvider: AIProvider.OpenAI,
+                    ModelUsed: openAIRequest.Model,
+                    ResponseTimeMs: openAIResponse.ResponseTimeMs
+                );
+            }
+
+            // Gerar sugestões baseadas no contexto
+            var suggestions = GenerateSuggestions(message, ragContext.RelevantChunks);
+
+            _logger.LogInformation("Resposta gerada com sucesso - Tokens: {Tokens}, Custo: ${Cost}", 
+                openAIResponse.TokensUsed, openAIResponse.Cost);
+
+            return (
+                Response: openAIResponse.Response,
+                Suggestions: suggestions,
+                TokenCount: openAIResponse.TokensUsed,
+                Cost: openAIResponse.Cost,
+                AIProvider: AIProvider.OpenAI,
+                ModelUsed: openAIResponse.Model,
+                ResponseTimeMs: openAIResponse.ResponseTimeMs
+            );
+        }
+        catch (Exception ex)
         {
-            "Pode me dar mais detalhes sobre este tópico?",
-            "Quais são as implicações práticas?",
-            "Como isso se relaciona com outros documentos?"
-        };
+            _logger.LogError(ex, "Erro ao gerar resposta do assistente");
+            return (
+                Response: "Desculpe, ocorreu um erro interno. Tente novamente.",
+                Suggestions: null,
+                TokenCount: 0,
+                Cost: 0m,
+                AIProvider: AIProvider.OpenAI,
+                ModelUsed: null,
+                ResponseTimeMs: 0
+            );
+        }
+    }
 
-        return (
-            Response: responses[Random.Shared.Next(responses.Length)],
-            Suggestions: suggestions,
-            TokenCount: Random.Shared.Next(50, 500),
-            Cost: Random.Shared.Next(1, 10) * 0.001m,
-            AIProvider: AIProvider.OpenAI,
-            ModelUsed: "gpt-4o-mini",
-            ResponseTimeMs: Random.Shared.Next(1000, 3000)
-        );
+    private static List<string> GenerateSuggestions(string message, List<DocumentChunkResult> relevantChunks)
+    {
+        var suggestions = new List<string>();
+
+        // Sugestões baseadas no contexto dos chunks
+        if (relevantChunks.Any())
+        {
+            var documentNames = relevantChunks.Select(c => c.DocumentName).Distinct().ToList();
+            
+            if (documentNames.Count == 1)
+            {
+                suggestions.Add($"Me conte mais sobre {documentNames.First()}");
+                suggestions.Add("Quais são os pontos principais deste documento?");
+            }
+            else if (documentNames.Count > 1)
+            {
+                suggestions.Add("Compare as informações entre estes documentos");
+                suggestions.Add("Quais são as diferenças principais?");
+            }
+        }
+
+        // Sugestões gerais baseadas no tipo de pergunta
+        if (message.ToLower().Contains("resumo") || message.ToLower().Contains("resumir"))
+        {
+            suggestions.Add("Pode detalhar os pontos mais importantes?");
+            suggestions.Add("Quais são as conclusões principais?");
+        }
+        else if (message.ToLower().Contains("análise") || message.ToLower().Contains("analisar"))
+        {
+            suggestions.Add("Quais são os riscos identificados?");
+            suggestions.Add("Há recomendações específicas?");
+        }
+        else
+        {
+            suggestions.Add("Pode me dar mais detalhes sobre este tópico?");
+            suggestions.Add("Como isso se relaciona com outros documentos?");
+            suggestions.Add("Quais são as implicações práticas?");
+        }
+
+        return suggestions.Take(3).ToList();
     }
 
     private static ChatSessionDto MapToDto(ChatSession session)

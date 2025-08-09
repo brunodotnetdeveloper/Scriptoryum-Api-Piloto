@@ -10,6 +10,7 @@ namespace Scriptoryum.Api.Infrastructure.Context;
 public class ScriptoryumDbContext(DbContextOptions<ScriptoryumDbContext> options) : IdentityDbContext<ApplicationUser, IdentityRole, string>(options)
 {
     public DbSet<Document> Documents { get; set; }
+    public DbSet<DocumentChunk> DocumentChunks { get; set; }
     public DbSet<ExtractedEntity> ExtractedEntities { get; set; }
     public DbSet<Insight> Insights { get; set; }
     public DbSet<RiskDetected> RisksDetected { get; set; }
@@ -127,9 +128,9 @@ public class ScriptoryumDbContext(DbContextOptions<ScriptoryumDbContext> options
 
             entity.Property(e => e.Content).HasColumnName("content");
 
-            // Aqui diz que a coluna é do tipo vetor com dimensão 1536
+            // Aqui diz que a coluna ï¿½ do tipo vetor com dimensï¿½o 1536
             entity.Property(e => e.Embedding)
-                  .HasColumnType("vector(768)")
+                  .HasColumnType("vector(1536)")
                   .HasColumnName("embedding");
 
             entity.Property(e => e.CreatedAt).HasColumnName("created_at");
@@ -323,28 +324,6 @@ public class ScriptoryumDbContext(DbContextOptions<ScriptoryumDbContext> options
         builder.Entity<AIConfiguration>(entity =>
         {
             entity.HasKey(ai => ai.Id);
-            
-            entity.Property(ai => ai.DefaultProvider)
-                .IsRequired()
-                .HasConversion<string>();
-            
-            entity.Property(ai => ai.OpenAIApiKey)
-                .HasMaxLength(200);
-            
-            entity.Property(ai => ai.OpenAIModel)
-                .HasMaxLength(100);
-            
-            entity.Property(ai => ai.ClaudeApiKey)
-                .HasMaxLength(200);
-            
-            entity.Property(ai => ai.ClaudeModel)
-                .HasMaxLength(100);
-            
-            entity.Property(ai => ai.GeminiApiKey)
-                .HasMaxLength(200);
-            
-            entity.Property(ai => ai.GeminiModel)
-                .HasMaxLength(100);
             
             entity.Property(ai => ai.MaxTokens)
                 .HasDefaultValue(4000);

@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Pgvector;
@@ -12,9 +13,11 @@ using Scriptoryum.Api.Infrastructure.Context;
 namespace Scriptoryum.Api.Migrations
 {
     [DbContext(typeof(ScriptoryumDbContext))]
-    partial class ScriptoryumDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250808195015_UpdateDataModel")]
+    partial class UpdateDataModel
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -197,6 +200,16 @@ namespace Scriptoryum.Api.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("ClaudeApiKey")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("claude_api_key");
+
+                    b.Property<string>("ClaudeModel")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("claude_model");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
@@ -204,14 +217,35 @@ namespace Scriptoryum.Api.Migrations
                         .HasDefaultValueSql("NOW()");
 
                     b.Property<string>("DefaultProvider")
+                        .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("default_provider");
+
+                    b.Property<string>("GeminiApiKey")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("gemini_api_key");
+
+                    b.Property<string>("GeminiModel")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("gemini_model");
 
                     b.Property<string>("MaxTokens")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("text")
                         .HasDefaultValue("4000")
                         .HasColumnName("max_tokens");
+
+                    b.Property<string>("OpenAIApiKey")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("open_a_i_api_key");
+
+                    b.Property<string>("OpenAIModel")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("open_a_i_model");
 
                     b.Property<string>("Temperature")
                         .ValueGeneratedOnAdd()
@@ -656,7 +690,7 @@ namespace Scriptoryum.Api.Migrations
                         .HasColumnName("document_id");
 
                     b.Property<Vector>("Embedding")
-                        .HasColumnType("vector(1536)")
+                        .HasColumnType("vector(768)")
                         .HasColumnName("embedding");
 
                     b.HasKey("Id")

@@ -7,7 +7,7 @@ public class AIProviderConfig : EntityBase
     public int AIConfigurationId { get; set; }
     public AIConfiguration AIConfiguration { get; set; }
     
-    public AIProvider Provider { get; set; }
+    public string Provider { get; set; }
     public string ApiKey { get; set; }
     public string SelectedModel { get; set; }
     public bool IsEnabled { get; set; }

@@ -7,7 +7,7 @@ public class AIConfigurationDto
 {
     public int Id { get; set; }
     public string UserId { get; set; } = string.Empty;
-    public AIProvider DefaultProvider { get; set; }
+    public string DefaultProvider { get; set; }
     public List<AIProviderConfigDto> Providers { get; set; } = new();
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
@@ -16,9 +16,8 @@ public class AIConfigurationDto
 public class AIProviderConfigDto
 {
     public int Id { get; set; }
-    public AIProvider Provider { get; set; }
-    
-    [Required(ErrorMessage = "API Key é obrigatória")]
+    public string Provider { get; set; }
+        
     public string ApiKey { get; set; } = string.Empty;
     
     [Required(ErrorMessage = "Modelo selecionado é obrigatório")]
@@ -42,16 +41,16 @@ public class AIModelDto
 public class UpdateAIConfigurationDto
 {
     [Required(ErrorMessage = "Provedor padrão é obrigatório")]
-    public AIProvider DefaultProvider { get; set; }
+    public string DefaultProvider { get; set; }
     
     [Required(ErrorMessage = "Configurações de provedores são obrigatórias")]
-    public List<AIProviderConfigDto> Providers { get; set; } = new();
+    public List<AIProviderConfigDto> Providers { get; set; } = [];
 }
 
 public class TestApiKeyDto
 {
     [Required(ErrorMessage = "Provedor é obrigatório")]
-    public AIProvider Provider { get; set; }
+    public string Provider { get; set; }
     
     [Required(ErrorMessage = "API Key é obrigatória")]
     public string ApiKey { get; set; } = string.Empty;
@@ -61,7 +60,7 @@ public class AIConfigurationResponseDto
 {
     public bool Success { get; set; }
     public string Message { get; set; } = string.Empty;
-    public AIConfigurationDto? Configuration { get; set; }
+    public AIConfigurationDto Configuration { get; set; }
     public List<string> Errors { get; set; } = new();
 }
 

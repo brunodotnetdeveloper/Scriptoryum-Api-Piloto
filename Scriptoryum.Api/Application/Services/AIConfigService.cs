@@ -11,7 +11,6 @@ public interface IAIConfigService
     Task<AIConfigurationResponseDto> GetConfigurationAsync(string userId);
     Task<AIConfigurationResponseDto> UpdateConfigurationAsync(string userId, UpdateAIConfigurationDto updateDto);
     Task<List<AIModelDto>> GetModelsForProviderAsync(AIProvider provider);
-    Task<TestApiKeyResponseDto> TestApiKeyAsync(TestApiKeyDto testDto);
 }
 
 public class AIConfigService : IAIConfigService
@@ -98,7 +97,7 @@ public class AIConfigService : IAIConfigService
             }
 
             // Atualizar provedor padrão
-            configuration.DefaultProvider = updateDto.DefaultProvider;
+            configuration.DefaultProvider = updateDto.DefaultProvider.ToString();
             configuration.UpdatedAt = DateTime.UtcNow;
 
             // Atualizar configurações dos provedores
@@ -160,72 +159,19 @@ public class AIConfigService : IAIConfigService
         return AvailableModels.TryGetValue(provider, out var models) ? models : new List<AIModelDto>();
     }
 
-    public async Task<TestApiKeyResponseDto> TestApiKeyAsync(TestApiKeyDto testDto)
-    {
-        try
-        {
-            // Simular delay de teste de API
-            await Task.Delay(1500);
-
-            // Validação básica do formato da API key
-            var isValidFormat = ValidateApiKeyFormat(testDto.Provider, testDto.ApiKey);
-            
-            if (!isValidFormat)
-            {
-                return new TestApiKeyResponseDto
-                {
-                    Success = false,
-                    Message = "Formato de API key inválido",
-                    Errors = new List<string> { "A API key não possui o formato esperado para este provedor" }
-                };
-            }
-
-            // Simular teste real da API (80% de sucesso)
-            var isSuccess = Random.Shared.NextDouble() > 0.2;
-
-            if (isSuccess)
-            {
-                return new TestApiKeyResponseDto
-                {
-                    Success = true,
-                    Message = "API key válida e funcionando!"
-                };
-            }
-            else
-            {
-                return new TestApiKeyResponseDto
-                {
-                    Success = false,
-                    Message = "API key inválida ou sem permissões adequadas",
-                    Errors = new List<string> { "Verifique se a API key está correta e possui as permissões necessárias" }
-                };
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Erro ao testar API key para provedor {Provider}", testDto.Provider);
-            return new TestApiKeyResponseDto
-            {
-                Success = false,
-                Message = "Erro ao testar API key",
-                Errors = new List<string> { "Ocorreu um erro inesperado durante o teste" }
-            };
-        }
-    }
-
     private async Task<AIConfiguration> CreateDefaultConfigurationAsync(string userId)
     {
         var configuration = new AIConfiguration
         {
             UserId = userId,
-            DefaultProvider = AIProvider.OpenAI,
+            DefaultProvider = AIProvider.OpenAI.ToString(),
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
             AIProviderConfigs = new List<AIProviderConfig>
             {
-                new() { Provider = AIProvider.OpenAI, ApiKey = "", SelectedModel = "gpt-4o-mini", IsEnabled = false, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
-                new() { Provider = AIProvider.Claude, ApiKey = "", SelectedModel = "claude-3-5-haiku-20241022", IsEnabled = false, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
-                new() { Provider = AIProvider.Gemini, ApiKey = "", SelectedModel = "gemini-1.5-flash", IsEnabled = false, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow }
+                new() { Provider = AIProvider.OpenAI.ToString(), ApiKey = "", SelectedModel = "gpt-4o-mini", IsEnabled = false, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                new() { Provider = AIProvider.Claude.ToString(), ApiKey = "", SelectedModel = "claude-3-5-haiku-20241022", IsEnabled = false, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                new() { Provider = AIProvider.Gemini.ToString(), ApiKey = "", SelectedModel = "gemini-1.5-flash", IsEnabled = false, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow }
             }
         };
 
@@ -234,21 +180,7 @@ public class AIConfigService : IAIConfigService
 
         return configuration;
     }
-
-    private static bool ValidateApiKeyFormat(AIProvider provider, string apiKey)
-    {
-        if (string.IsNullOrWhiteSpace(apiKey) || apiKey.Length < 20)
-            return false;
-
-        return provider switch
-        {
-            AIProvider.OpenAI => apiKey.StartsWith("sk-") && apiKey.Length > 20,
-            AIProvider.Claude => apiKey.StartsWith("sk-ant-") && apiKey.Length > 20,
-            AIProvider.Gemini => apiKey.Length > 20, // Gemini não tem prefixo específico
-            _ => false
-        };
-    }
-
+    
     private static AIConfigurationDto MapToDto(AIConfiguration configuration)
     {
         return new AIConfigurationDto

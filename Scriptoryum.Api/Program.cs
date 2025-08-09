@@ -17,7 +17,11 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Configure PostgreSQL DbContext
 builder.Services.AddDbContext<ScriptoryumDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"), o => o.UseVector()));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"), o => 
+    {
+        o.UseVector();
+        o.CommandTimeout(300); // 5 minutes timeout for migrations
+    }));
 
 // Configure Identity
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
@@ -52,6 +56,8 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 
 // Register AI Configuration and Chat services
 builder.Services.AddScoped<IAIConfigService, AIConfigService>();
+builder.Services.AddScoped<IOpenAIService, OpenAIService>();
+builder.Services.AddScoped<IRagService, RagService>();
 builder.Services.AddScoped<IEscribaService, EscribaService>();
 
 // Configure Cloudflare R2 options
