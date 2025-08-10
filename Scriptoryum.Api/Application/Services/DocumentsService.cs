@@ -16,7 +16,7 @@ public interface IDocumentsService
     Task<string> GetDocumentDownloadUrlAsync(string storagePath, TimeSpan expiration);
 }
 
-public class DocumentsService(ScriptoryumDbContext context, ILogger<DocumentsService> logger, ICloudflareR2Client r2Client, IRedisQueueService redisQueueService) : IDocumentsService
+public class DocumentsService(ScriptoryumDbContext context, ILogger<DocumentsService> logger, ICloudflareR2Client r2Client, IRedisQueueService redisQueueService, INotificationService notificationService) : IDocumentsService
 {
     private readonly Dictionary<string, FileType> _allowedExtensions = new()
     {
@@ -105,6 +105,25 @@ public class DocumentsService(ScriptoryumDbContext context, ILogger<DocumentsSer
 
             // Documento salvo com sucesso
             logger.LogInformation("Documento {DocumentId} salvo com sucesso", document.Id);
+
+            // Criar notificação de upload
+            try
+            {
+                await notificationService.CreateNotificationAsync(new CreateNotificationDto
+                {
+                    UserId = userId,
+                    Type = NotificationType.DocumentUploaded,
+                    Title = "Documento enviado com sucesso",
+                    Message = $"O documento '{document.OriginalFileName}' foi enviado e está sendo processado.",
+                    DocumentId = document.Id
+                });
+                logger.LogInformation("Notificação de upload criada para documento {DocumentId}", document.Id);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Erro ao criar notificação de upload para documento {DocumentId}", document.Id);
+                // Não falha a operação se a notificação falhar
+            }
 
             // Enviar documento para fila Redis para processamento
             try

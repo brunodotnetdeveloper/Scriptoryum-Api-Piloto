@@ -23,6 +23,9 @@ public class ScriptoryumDbContext(DbContextOptions<ScriptoryumDbContext> options
     // AI Configuration
     public DbSet<AIConfiguration> AIConfigurations { get; set; }
     public DbSet<AIProviderConfig> AIProviderConfigs { get; set; }
+    
+    // Notifications
+    public DbSet<Notification> Notifications { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -367,6 +370,48 @@ public class ScriptoryumDbContext(DbContextOptions<ScriptoryumDbContext> options
                 .WithMany(ai => ai.AIProviderConfigs)
                 .HasForeignKey(apc => apc.AIConfigurationId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Configure Notification
+        builder.Entity<Notification>(entity =>
+        {
+            entity.HasKey(n => n.Id);
+            
+            entity.Property(n => n.Type)
+                .IsRequired()
+                .HasConversion<string>();
+            
+            entity.Property(n => n.Status)
+                .IsRequired()
+                .HasConversion<string>()
+                .HasDefaultValue(NotificationStatus.Unread);
+            
+            entity.Property(n => n.Title)
+                .IsRequired()
+                .HasMaxLength(200);
+            
+            entity.Property(n => n.Message)
+                .IsRequired()
+                .HasMaxLength(1000);
+            
+            entity.Property(n => n.AdditionalData)
+                .HasMaxLength(2000);
+
+            // Relationship with ApplicationUser
+            entity.HasOne(n => n.User)
+                .WithMany(u => u.Notifications)
+                .HasForeignKey(n => n.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Relationship with Document (optional)
+            entity.HasOne(n => n.Document)
+                .WithMany()
+                .HasForeignKey(n => n.DocumentId)
+                .OnDelete(DeleteBehavior.SetNull);
+            
+            // Index for better query performance
+            entity.HasIndex(n => new { n.UserId, n.Status });
+            entity.HasIndex(n => n.CreatedAt);
         });
 
         // Configure EntityBase properties for all entities

@@ -51,6 +51,7 @@ builder.Services.AddControllers();
 
 // Register application services
 builder.Services.AddScoped<IDocumentsService, DocumentsService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
 
 builder.Services.AddScoped<IAuthService, AuthService>();
 
