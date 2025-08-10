@@ -17,12 +17,12 @@ public class Document : EntityBase
     public string UploadedByUserId { get; set; }
     public ApplicationUser UploadedByUser { get; set; }
     
-    public DateTime UploadedAt { get; set; } = DateTime.UtcNow;
+    public DateTimeOffset UploadedAt { get; set; } = DateTimeOffset.UtcNow;
     public DocumentStatus Status { get; set; } = DocumentStatus.Uploaded;
 
     public string TextExtracted { get; set; }
 
-    public DateTime? ProcessingStartedAt { get; set; }
+    public DateTimeOffset? ProcessingStartedAt { get; set; }
 
     public ICollection<ExtractedEntity> ExtractedEntities { get; set; } = [];
 

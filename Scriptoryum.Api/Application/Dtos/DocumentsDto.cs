@@ -13,7 +13,8 @@ public class DocumentsDto
     public string StoragePath { get; set; }
     public long FileSize { get; set; }
     public string Status { get; set; }
-    public DateTime UploadedAt { get; set; }
+    public DateTimeOffset UploadedAt { get; set; }
+
     public string UploadedByUserId { get; set; }
 }
 

@@ -11,6 +11,6 @@ public class DocumentQueueDto
     public string StoragePath { get; set; } = string.Empty;
     public FileType FileType { get; set; }
     public string UploadedByUserId { get; set; } = string.Empty;
-    public DateTime UploadedAt { get; set; }
-    public DateTime QueuedAt { get; set; }
+    public DateTimeOffset UploadedAt { get; set; }
+    public DateTimeOffset QueuedAt { get; set; }
 }

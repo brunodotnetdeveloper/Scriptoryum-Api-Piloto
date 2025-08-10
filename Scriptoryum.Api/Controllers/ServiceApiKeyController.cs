@@ -188,7 +188,7 @@ public class CreateApiKeyResponse
     public string KeyPrefix { get; set; } = string.Empty;
     public string KeySuffix { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
-    public DateTime? ExpiresAt { get; set; }
+    public DateTimeOffset? ExpiresAt { get; set; }
     public long? MonthlyUsageLimit { get; set; }
     public string? Permissions { get; set; }
     public string? AllowedIPs { get; set; }
@@ -203,8 +203,8 @@ public class ApiKeyResponse
     public string KeyPrefix { get; set; } = string.Empty;
     public string KeySuffix { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
-    public DateTime? ExpiresAt { get; set; }
-    public DateTime? LastUsedAt { get; set; }
+    public DateTimeOffset? ExpiresAt { get; set; }
+    public DateTimeOffset? LastUsedAt { get; set; }
     public long UsageCount { get; set; }
     public long? MonthlyUsageLimit { get; set; }
     public long CurrentMonthUsage { get; set; }

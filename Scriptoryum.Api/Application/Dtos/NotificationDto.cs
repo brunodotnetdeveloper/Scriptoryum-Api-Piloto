@@ -15,8 +15,8 @@ public class NotificationDto
     public string DocumentName { get; set; }
     public string AdditionalData { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
-    public DateTime? ReadAt { get; set; }
-    public DateTime? DismissedAt { get; set; }
+    public DateTimeOffset? ReadAt { get; set; }
+    public DateTimeOffset? DismissedAt { get; set; }
 }
 
 public class CreateNotificationDto

@@ -12,5 +12,5 @@ public class RiskDetected: EntityBase
     public decimal ConfidenceScore { get; set; }
 
     public string EvidenceExcerpt { get; set; }
-    public DateTime DetectedAt { get; set; } = DateTime.UtcNow;
+    public DateTimeOffset DetectedAt { get; set; } = DateTimeOffset.UtcNow;
 }

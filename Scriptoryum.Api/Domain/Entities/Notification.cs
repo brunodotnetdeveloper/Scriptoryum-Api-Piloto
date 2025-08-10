@@ -20,6 +20,6 @@ public class Notification : EntityBase
     // Dados adicionais em JSON (opcional)
     public string AdditionalData { get; set; }
     
-    public DateTime? ReadAt { get; set; }
-    public DateTime? DismissedAt { get; set; }
+    public DateTimeOffset? ReadAt { get; set; }
+    public DateTimeOffset? DismissedAt { get; set; }
 }

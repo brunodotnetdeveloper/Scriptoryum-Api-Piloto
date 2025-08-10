@@ -45,12 +45,12 @@ public class ServiceApiKey : EntityBase
     /// <summary>
     /// Data de expiração da chave (opcional)
     /// </summary>
-    public DateTime? ExpiresAt { get; set; }
+    public DateTimeOffset? ExpiresAt { get; set; }
 
     /// <summary>
     /// Data do último uso da chave
     /// </summary>
-    public DateTime? LastUsedAt { get; set; }
+    public DateTimeOffset? LastUsedAt { get; set; }
 
     /// <summary>
     /// Contador de uso da chave
@@ -96,7 +96,7 @@ public class ServiceApiKey : EntityBase
     /// Verifica se a chave está ativa e não expirou
     /// </summary>
     public bool IsValid => Status == ServiceApiKeyStatus.Active && 
-                          (ExpiresAt == null || ExpiresAt > DateTime.UtcNow);
+                          (ExpiresAt == null || ExpiresAt > DateTimeOffset.UtcNow);
 
     /// <summary>
     /// Verifica se a chave atingiu o limite mensal
@@ -120,6 +120,6 @@ public class ServiceApiKey : EntityBase
         
         UsageCount++;
         CurrentMonthUsage++;
-        LastUsedAt = DateTime.UtcNow;
+        LastUsedAt = DateTimeOffset.UtcNow;
     }
 }

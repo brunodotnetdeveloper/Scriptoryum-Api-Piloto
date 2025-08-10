@@ -34,6 +34,20 @@ public class ScriptoryumDbContext(DbContextOptions<ScriptoryumDbContext> options
     {
         base.OnModelCreating(builder);
 
+        // Configure DateTime to UTC conversion for PostgreSQL compatibility
+        foreach (var entityType in builder.Model.GetEntityTypes())
+        {
+            foreach (var property in entityType.GetProperties())
+            {
+                if (property.ClrType == typeof(DateTime) || property.ClrType == typeof(DateTime?))
+                {
+                    property.SetValueConverter(new Microsoft.EntityFrameworkCore.Storage.ValueConversion.ValueConverter<DateTime, DateTime>(
+                        v => v.Kind == DateTimeKind.Unspecified ? DateTime.SpecifyKind(v, DateTimeKind.Utc) : v.ToUniversalTime(),
+                        v => DateTime.SpecifyKind(v, DateTimeKind.Utc)));
+                }
+            }
+        }
+
         // Configure snake_case naming convention
         foreach (var entity in builder.Model.GetEntityTypes())
         {

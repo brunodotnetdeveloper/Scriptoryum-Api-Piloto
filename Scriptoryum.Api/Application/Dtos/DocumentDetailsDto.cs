@@ -12,7 +12,7 @@ public class DocumentDetailsDto
     public string StoragePath { get; set; }
     public long FileSize { get; set; }
     public string Status { get; set; }
-    public DateTime UploadedAt { get; set; }
+    public DateTimeOffset UploadedAt { get; set; }
     public string UploadedByUserId { get; set; }
 
     public string TextExtracted { get; set; }
@@ -41,7 +41,7 @@ public class RiskDetectedDto
     public RiskLevel RiskLevel { get; set; }
     public decimal ConfidenceScore { get; set; }
     public string EvidenceExcerpt { get; set; }
-    public DateTime DetectedAt { get; set; }
+    public DateTimeOffset DetectedAt { get; set; }
 }
 
 public class InsightDto
@@ -57,7 +57,7 @@ public class InsightDto
 public class TimelineEventDto
 {
     public int Id { get; set; }
-    public DateTime EventDate { get; set; }
+    public DateTimeOffset EventDate { get; set; }
     public string EventType { get; set; }
     public string Description { get; set; }
     public string SourceExcerpt { get; set; }
