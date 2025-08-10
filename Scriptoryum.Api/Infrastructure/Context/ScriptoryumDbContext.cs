@@ -26,6 +26,9 @@ public class ScriptoryumDbContext(DbContextOptions<ScriptoryumDbContext> options
     
     // Notifications
     public DbSet<Notification> Notifications { get; set; }
+    
+    // Service API Keys
+    public DbSet<ServiceApiKey> ServiceApiKeys { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -412,6 +415,65 @@ public class ScriptoryumDbContext(DbContextOptions<ScriptoryumDbContext> options
             // Index for better query performance
             entity.HasIndex(n => new { n.UserId, n.Status });
             entity.HasIndex(n => n.CreatedAt);
+        });
+
+        // Configure ServiceApiKey
+        builder.Entity<ServiceApiKey>(entity =>
+        {
+            entity.HasKey(sak => sak.Id);
+            
+            entity.Property(sak => sak.ServiceName)
+                .IsRequired()
+                .HasMaxLength(100);
+            
+            entity.Property(sak => sak.Description)
+                .HasMaxLength(500);
+            
+            entity.Property(sak => sak.ApiKeyHash)
+                .IsRequired()
+                .HasMaxLength(128); // SHA-256 hash
+            
+            entity.Property(sak => sak.KeyPrefix)
+                .IsRequired()
+                .HasMaxLength(10);
+            
+            entity.Property(sak => sak.KeySuffix)
+                .IsRequired()
+                .HasMaxLength(10);
+            
+            entity.Property(sak => sak.Status)
+                .IsRequired()
+                .HasConversion<string>()
+                .HasDefaultValue(ServiceApiKeyStatus.Active);
+            
+            entity.Property(sak => sak.UsageCount)
+                .HasDefaultValue(0);
+            
+            entity.Property(sak => sak.CurrentMonthUsage)
+                .HasDefaultValue(0);
+            
+            entity.Property(sak => sak.CurrentMonthYear)
+                .IsRequired()
+                .HasMaxLength(7); // YYYY-MM format
+            
+            entity.Property(sak => sak.Permissions)
+                .HasMaxLength(2000);
+            
+            entity.Property(sak => sak.AllowedIPs)
+                .HasMaxLength(1000);
+
+            // Relationship with ApplicationUser
+            entity.HasOne(sak => sak.CreatedByUser)
+                .WithMany()
+                .HasForeignKey(sak => sak.CreatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            
+            // Indexes for better query performance
+            entity.HasIndex(sak => sak.ApiKeyHash)
+                .IsUnique();
+            entity.HasIndex(sak => sak.Status);
+            entity.HasIndex(sak => sak.CreatedByUserId);
+            entity.HasIndex(sak => sak.ExpiresAt);
         });
 
         // Configure EntityBase properties for all entities
