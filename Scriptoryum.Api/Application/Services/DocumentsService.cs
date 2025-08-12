@@ -112,7 +112,7 @@ public class DocumentsService(ScriptoryumDbContext context, ILogger<DocumentsSer
                 await notificationService.CreateNotificationAsync(new CreateNotificationDto
                 {
                     UserId = userId,
-                    Type = NotificationType.DocumentUploaded,
+                    Type = NotificationType.DocumentUploaded.ToString(),
                     Title = "Documento enviado com sucesso",
                     Message = $"O documento '{document.OriginalFileName}' foi enviado e está sendo processado.",
                     DocumentId = document.Id

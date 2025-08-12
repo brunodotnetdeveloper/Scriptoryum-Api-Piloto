@@ -7,8 +7,8 @@ public class Notification : EntityBase
     public string UserId { get; set; }
     public ApplicationUser User { get; set; }
     
-    public NotificationType Type { get; set; }
-    public NotificationStatus Status { get; set; } = NotificationStatus.Unread;
+    public string Type { get; set; }
+    public string Status { get; set; } = NotificationStatus.Unread.ToString();
     
     public string Title { get; set; }
     public string Message { get; set; }

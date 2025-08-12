@@ -5,9 +5,9 @@ namespace Scriptoryum.Api.Application.Dtos;
 public class NotificationDto
 {
     public int Id { get; set; }
-    public NotificationType Type { get; set; }
+    public string Type { get; set; }
     public string TypeText { get; set; }
-    public NotificationStatus Status { get; set; }
+    public string Status { get; set; }
     public string StatusText { get; set; }
     public string Title { get; set; }
     public string Message { get; set; }
@@ -22,7 +22,7 @@ public class NotificationDto
 public class CreateNotificationDto
 {
     public string UserId { get; set; }
-    public NotificationType Type { get; set; }
+    public string Type { get; set; }
     public string Title { get; set; }
     public string Message { get; set; }
     public int? DocumentId { get; set; }

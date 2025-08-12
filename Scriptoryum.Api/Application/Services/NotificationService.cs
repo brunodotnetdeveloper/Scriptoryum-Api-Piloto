@@ -36,7 +36,7 @@ public class NotificationService : INotificationService
             Message = createDto.Message,
             DocumentId = createDto.DocumentId,
             AdditionalData = createDto.AdditionalData,
-            Status = NotificationStatus.Unread
+            Status = NotificationStatus.Unread.ToString()
         };
 
         _context.Notifications.Add(notification);
@@ -53,7 +53,7 @@ public class NotificationService : INotificationService
 
         if (status.HasValue)
         {
-            query = query.Where(n => n.Status == status.Value);
+            query = query.Where(n => n.Status == status.Value.ToString());
         }
 
         var notifications = await query
@@ -72,7 +72,7 @@ public class NotificationService : INotificationService
             .CountAsync();
 
         var unreadCount = await _context.Notifications
-            .Where(n => n.UserId == userId && n.Status == NotificationStatus.Unread)
+            .Where(n => n.UserId == userId && n.Status == NotificationStatus.Unread.ToString())
             .CountAsync();
 
         var recentNotifications = await _context.Notifications
@@ -98,7 +98,7 @@ public class NotificationService : INotificationService
         if (notification == null)
             throw new ArgumentException("Notification not found or access denied");
 
-        notification.Status = status;
+        notification.Status = status.ToString();
         
         if (status == NotificationStatus.Read && notification.ReadAt == null)
         {
@@ -117,12 +117,12 @@ public class NotificationService : INotificationService
     public async Task<bool> MarkAllAsReadAsync(string userId)
     {
         var unreadNotifications = await _context.Notifications
-            .Where(n => n.UserId == userId && n.Status == NotificationStatus.Unread)
+            .Where(n => n.UserId == userId && n.Status == NotificationStatus.Unread.ToString())
             .ToListAsync();
 
         foreach (var notification in unreadNotifications)
         {
-            notification.Status = NotificationStatus.Read;
+            notification.Status = NotificationStatus.Read.ToString();
             notification.ReadAt = DateTime.UtcNow;
         }
 
@@ -146,7 +146,7 @@ public class NotificationService : INotificationService
     public async Task<int> GetUnreadCountAsync(string userId)
     {
         return await _context.Notifications
-            .Where(n => n.UserId == userId && n.Status == NotificationStatus.Unread)
+            .Where(n => n.UserId == userId && n.Status == NotificationStatus.Unread.ToString())
             .CountAsync();
     }
 
@@ -164,9 +164,9 @@ public class NotificationService : INotificationService
         return new NotificationDto
         {
             Id = notification.Id,
-            Type = notification.Type,
+            Type = notification.Type.ToString(),
             TypeText = notification.Type.ToString(),
-            Status = notification.Status,
+            Status = notification.Status.ToString(),
             StatusText = notification.Status.ToString(),
             Title = notification.Title,
             Message = notification.Message,
