@@ -59,6 +59,54 @@ public class NotificationsController(INotificationService notificationService) :
     }
 
     /// <summary>
+    /// Cria uma nova notificação
+    /// </summary>
+    [HttpPost]
+    public async Task<ActionResult<NotificationDto>> CreateNotification([FromBody] CreateNotificationDto createDto)
+    {
+        if (createDto == null)
+            return BadRequest("Dados inválidos");
+
+        if (string.IsNullOrWhiteSpace(createDto.UserId) || string.IsNullOrWhiteSpace(createDto.Title) || string.IsNullOrWhiteSpace(createDto.Message))
+            return BadRequest("UserId, Title e Message são obrigatórios");
+
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized();
+
+        var authType = User.FindFirst("AuthType")?.Value;
+        if (authType == "ServiceApiKey")
+        {
+            var permissions = User.FindFirst("Permissions")?.Value ?? string.Empty;
+            var hasPermission = permissions
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Any(p => string.Equals(p, "notifications:create", StringComparison.OrdinalIgnoreCase));
+
+            if (!hasPermission)
+                return Forbid();
+
+            if (!string.Equals(createDto.UserId, userId, StringComparison.Ordinal))
+                return Forbid();
+        }
+        else
+        {
+            // Usuário autenticado via JWT só pode criar notificações para si mesmo
+            if (!string.Equals(createDto.UserId, userId, StringComparison.Ordinal))
+                return Forbid();
+        }
+
+        try
+        {
+            var created = await notificationService.CreateNotificationAsync(createDto);
+            return Created($"/api/notifications/{created.Id}", created);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = "Erro ao criar notificação", error = ex.Message });
+        }
+    }
+
+    /// <summary>
     /// Atualiza o status de uma notificação
     /// </summary>
     [HttpPut("{id}/status")]
