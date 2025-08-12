@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Scriptoryum.Api.Infrastructure.Context;
+using Scriptoryum.Api.Domain.Enums;
 using Pgvector;
 using Pgvector.EntityFrameworkCore;
 
@@ -8,16 +9,16 @@ namespace Scriptoryum.Api.Infrastructure.Services;
 public class RagService : IRagService
 {
     private readonly ScriptoryumDbContext _context;
-    private readonly IOpenAIService _openAIService;
+    private readonly IAIService _aiService;
     private readonly ILogger<RagService> _logger;
 
     public RagService(
         ScriptoryumDbContext context, 
-        IOpenAIService openAIService, 
+        IAIService aiService, 
         ILogger<RagService> logger)
     {
         _context = context;
-        _openAIService = openAIService;
+        _aiService = aiService;
         _logger = logger;
     }
 
@@ -94,8 +95,15 @@ public class RagService : IRagService
 
             var apiKey = defaultProviderConfig.ApiKey;
 
-            // Gerar embedding da query usando o token do modelo selecionado pelo usuário
-            var queryEmbedding = await _openAIService.GenerateEmbeddingAsync(query, apiKey);
+            // Determinar o provedor para gerar embedding
+            if (!Enum.TryParse<AIProvider>(defaultProviderConfig.Provider, out var aiProvider))
+            {
+                _logger.LogWarning("Provedor de IA inválido: {Provider} para usuário {UserId}", defaultProviderConfig.Provider, userId);
+                return new List<DocumentChunkResult>();
+            }
+
+            // Gerar embedding da query usando o provedor configurado
+            var queryEmbedding = await _aiService.GenerateEmbeddingAsync(query, apiKey, aiProvider);
 
             if (queryEmbedding.Length == 0)
             {

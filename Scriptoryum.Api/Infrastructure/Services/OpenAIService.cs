@@ -174,35 +174,3 @@ public class OpenAIService : IOpenAIService
         return 0m;
     }
 }
-
-// Classes para deserialização da resposta da OpenAI
-public class OpenAIApiResponse
-{
-    public List<Choice>? Choices { get; set; }
-    public Usage? Usage { get; set; }
-}
-
-public class Choice
-{
-    public Message? Message { get; set; }
-}
-
-public class Message
-{
-    public string? Content { get; set; }
-}
-
-public class Usage
-{
-    public int TotalTokens { get; set; }
-}
-
-public class OpenAIEmbeddingResponse
-{
-    public List<EmbeddingData>? Data { get; set; }
-}
-
-public class EmbeddingData
-{
-    public float[]? Embedding { get; set; }
-}

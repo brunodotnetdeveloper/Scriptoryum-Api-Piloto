@@ -60,7 +60,7 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 
 // Register AI Configuration and Chat services
 builder.Services.AddScoped<IAIConfigService, AIConfigService>();
-builder.Services.AddScoped<IOpenAIService, OpenAIService>();
+builder.Services.AddScoped<IAIService, AIService>();
 builder.Services.AddScoped<IRagService, RagService>();
 builder.Services.AddScoped<IEscribaService, EscribaService>();
 

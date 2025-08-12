@@ -27,18 +27,18 @@ public class EscribaService : IEscribaService
 {
     private readonly ScriptoryumDbContext _context;
     private readonly ILogger<EscribaService> _logger;
-    private readonly IOpenAIService _openAIService;
+    private readonly IAIService _aiService;
     private readonly IRagService _ragService;
 
     public EscribaService(
         ScriptoryumDbContext context, 
         ILogger<EscribaService> logger,
-        IOpenAIService openAIService,
+        IAIService aiService,
         IRagService ragService)
     {
         _context = context;
         _logger = logger;
-        _openAIService = openAIService;
+        _aiService = aiService;
         _ragService = ragService;
     }
 
@@ -635,19 +635,34 @@ public class EscribaService : IEscribaService
                 );
             }
 
-            // Obter configuração do provedor ativo (OpenAI)
-            var openAIConfig = aiConfig.AIProviderConfigs
+            // Obter configuração do provedor ativo
+            var activeProviderConfig = aiConfig.AIProviderConfigs
                 .FirstOrDefault(p => p.IsEnabled);
 
-            if (openAIConfig == null || string.IsNullOrEmpty(openAIConfig.ApiKey))
+            if (activeProviderConfig == null || string.IsNullOrEmpty(activeProviderConfig.ApiKey))
             {
-                _logger.LogWarning("Configuração OpenAI não encontrada ou inválida para usuário {UserId}", userId);
+                _logger.LogWarning("Configuração de IA ativa não encontrada ou inválida para usuário {UserId}", userId);
                 return (
-                    Response: "Desculpe, não foi possível processar sua solicitação. Configure sua API key do OpenAI nas configurações.",
+                    Response: "Desculpe, não foi possível processar sua solicitação. Configure sua API key nas configurações.",
                     Suggestions: null,
                     TokenCount: 0,
                     Cost: 0m,
-                    AIProvider: AIProvider.OpenAI,
+                    AIProvider: null,
+                    ModelUsed: null,
+                    ResponseTimeMs: 0
+                );
+            }
+
+            // Determinar o provedor baseado na configuração
+            if (!Enum.TryParse<AIProvider>(activeProviderConfig.Provider, out var aiProvider))
+            {
+                _logger.LogWarning("Provedor de IA inválido: {Provider} para usuário {UserId}", activeProviderConfig.Provider, userId);
+                return (
+                    Response: "Desculpe, provedor de IA configurado é inválido. Verifique suas configurações.",
+                    Suggestions: null,
+                    TokenCount: 0,
+                    Cost: 0m,
+                    AIProvider: null,
                     ModelUsed: null,
                     ResponseTimeMs: 0
                 );
@@ -665,48 +680,49 @@ public class EscribaService : IEscribaService
                     : $"{context}\n\n--- Contexto Adicional ---\n{ragContext.Context}";
             }
 
-            // Preparar requisição para OpenAI
-            var openAIRequest = new OpenAIRequest
+            // Preparar requisição para o provedor de IA
+            var aiRequest = new AIRequest
             {
                 Message = message,
                 Context = finalContext,
-                Model = openAIConfig.SelectedModel ?? "gpt-4o-mini",
-                Temperature = 0.7f,
-                MaxTokens = 4000,
-                ApiKey = openAIConfig.ApiKey
+                Model = activeProviderConfig.SelectedModel ?? GetDefaultModel(aiProvider),
+                Temperature = float.TryParse(aiConfig.Temperature, out var temp) ? temp : 0.7f,
+                MaxTokens = int.TryParse(aiConfig.MaxTokens, out var maxTokens) ? maxTokens : 4000,
+                ApiKey = activeProviderConfig.ApiKey,
+                Provider = aiProvider
             };
 
-            // Chamar OpenAI
-            var openAIResponse = await _openAIService.GenerateResponseAsync(openAIRequest);
+            // Chamar o serviço de IA
+            var aiResponse = await _aiService.GenerateResponseAsync(aiRequest);
 
-            if (!openAIResponse.Success)
+            if (!aiResponse.Success)
             {
-                _logger.LogError("Erro na resposta da OpenAI: {Error}", openAIResponse.ErrorMessage);
+                _logger.LogError("Erro na resposta da API {Provider}: {Error}", aiProvider, aiResponse.ErrorMessage);
                 return (
                     Response: "Desculpe, ocorreu um erro ao processar sua solicitação. Tente novamente.",
                     Suggestions: null,
                     TokenCount: 0,
                     Cost: 0m,
-                    AIProvider: AIProvider.OpenAI,
-                    ModelUsed: openAIRequest.Model,
-                    ResponseTimeMs: openAIResponse.ResponseTimeMs
+                    AIProvider: aiProvider,
+                    ModelUsed: aiRequest.Model,
+                    ResponseTimeMs: aiResponse.ResponseTimeMs
                 );
             }
 
             // Gerar sugestões baseadas no contexto
             var suggestions = GenerateSuggestions(message, ragContext.RelevantChunks);
 
-            _logger.LogInformation("Resposta gerada com sucesso - Tokens: {Tokens}, Custo: ${Cost}", 
-                openAIResponse.TokensUsed, openAIResponse.Cost);
+            _logger.LogInformation("Resposta {Provider} recebida - Tokens: {Tokens}, Custo: ${Cost}, Tempo: {Time}ms", 
+                aiProvider, aiResponse.TokensUsed, aiResponse.Cost, aiResponse.ResponseTimeMs);
 
             return (
-                Response: openAIResponse.Response,
+                Response: aiResponse.Response,
                 Suggestions: suggestions,
-                TokenCount: openAIResponse.TokensUsed,
-                Cost: openAIResponse.Cost,
-                AIProvider: AIProvider.OpenAI,
-                ModelUsed: openAIResponse.Model,
-                ResponseTimeMs: openAIResponse.ResponseTimeMs
+                TokenCount: aiResponse.TokensUsed,
+                Cost: aiResponse.Cost,
+                AIProvider: aiProvider,
+                ModelUsed: aiResponse.Model,
+                ResponseTimeMs: aiResponse.ResponseTimeMs
             );
         }
         catch (Exception ex)
@@ -717,11 +733,22 @@ public class EscribaService : IEscribaService
                 Suggestions: null,
                 TokenCount: 0,
                 Cost: 0m,
-                AIProvider: AIProvider.OpenAI,
+                AIProvider: null,
                 ModelUsed: null,
                 ResponseTimeMs: 0
             );
         }
+    }
+
+    private static string GetDefaultModel(AIProvider provider)
+    {
+        return provider switch
+        {
+            AIProvider.OpenAI => "gpt-4o-mini",
+            AIProvider.Claude => "claude-3-haiku-20240307",
+            AIProvider.Gemini => "gemini-1.5-flash",
+            _ => "gpt-4o-mini"
+        };
     }
 
     private static List<string> GenerateSuggestions(string message, List<DocumentChunkResult> relevantChunks)
