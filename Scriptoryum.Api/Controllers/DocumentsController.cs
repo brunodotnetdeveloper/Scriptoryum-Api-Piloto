@@ -9,7 +9,7 @@ namespace Scriptoryum.Api.Controllers;
 
 [Route("api/documents")]
 [ApiController]
-//[Authorize]
+[Authorize]
 public class DocumentsController(IDocumentsService documentsService) : ControllerBase
 {
 

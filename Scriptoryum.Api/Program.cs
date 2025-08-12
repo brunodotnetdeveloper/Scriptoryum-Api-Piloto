@@ -186,7 +186,7 @@ builder.Services.AddSwaggerGen(c =>
     {
         Title = "Scriptoryum API",
         Version = "v1",
-        Description = "API para gerenciamento de documentos e an�lise de dados do Scriptoryum",
+        Description = "API para gerenciamento de documentos e análise de dados do Scriptoryum",
         Contact = new OpenApiContact
         {
             Name = "Scriptoryum Team",
@@ -201,8 +201,20 @@ builder.Services.AddSwaggerGen(c =>
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Description = "JWT Authorization header usando o esquema Bearer. \r\n\r\n" +
-                      "Digite 'Bearer' [espa�o] e ent�o seu token na entrada de texto abaixo.\r\n\r\n" +
+                      "Digite 'Bearer' [espaço] e então seu token na entrada de texto abaixo.\r\n\r\n" +
                       "Exemplo: \"Bearer 12345abcdef\"",
+        Name = "Authorization",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.ApiKey,
+        Scheme = "Bearer"
+    });
+
+    // Configure API Key Authentication for Swagger
+    c.AddSecurityDefinition("ApiKey", new OpenApiSecurityScheme
+    {
+        Description = "API Key Authorization header usando o esquema Bearer com prefixo 'sk-'. \r\n\r\n" +
+                      "Digite 'Bearer' [espaço] e então sua API key na entrada de texto abaixo.\r\n\r\n" +
+                      "Exemplo: \"Bearer sk-1234567890abcdef\"",
         Name = "Authorization",
         In = ParameterLocation.Header,
         Type = SecuritySchemeType.ApiKey,
@@ -221,6 +233,20 @@ builder.Services.AddSwaggerGen(c =>
                 },
                 Scheme = "oauth2",
                 Name = "Bearer",
+                In = ParameterLocation.Header,
+            },
+            new List<string>()
+        },
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "ApiKey"
+                },
+                Scheme = "ApiKey",
+                Name = "Authorization",
                 In = ParameterLocation.Header,
             },
             new List<string>()

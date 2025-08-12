@@ -10,14 +10,8 @@ namespace Scriptoryum.Api.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
-public class NotificationsController : ControllerBase
+public class NotificationsController(INotificationService notificationService) : ControllerBase
 {
-    private readonly INotificationService _notificationService;
-
-    public NotificationsController(INotificationService notificationService)
-    {
-        _notificationService = notificationService;
-    }
 
     /// <summary>
     /// Obtém as notificações do usuário
@@ -32,7 +26,7 @@ public class NotificationsController : ControllerBase
         if (string.IsNullOrEmpty(userId))
             return Unauthorized();
 
-        var notifications = await _notificationService.GetUserNotificationsAsync(userId, page, pageSize, status);
+        var notifications = await notificationService.GetUserNotificationsAsync(userId, page, pageSize, status);
         return Ok(notifications);
     }
 
@@ -46,7 +40,7 @@ public class NotificationsController : ControllerBase
         if (string.IsNullOrEmpty(userId))
             return Unauthorized();
 
-        var summary = await _notificationService.GetUserNotificationSummaryAsync(userId);
+        var summary = await notificationService.GetUserNotificationSummaryAsync(userId);
         return Ok(summary);
     }
 
@@ -60,7 +54,7 @@ public class NotificationsController : ControllerBase
         if (string.IsNullOrEmpty(userId))
             return Unauthorized();
 
-        var count = await _notificationService.GetUnreadCountAsync(userId);
+        var count = await notificationService.GetUnreadCountAsync(userId);
         return Ok(count);
     }
 
@@ -78,7 +72,7 @@ public class NotificationsController : ControllerBase
 
         try
         {
-            var notification = await _notificationService.UpdateNotificationStatusAsync(id, userId, updateDto.Status);
+            var notification = await notificationService.UpdateNotificationStatusAsync(id, userId, updateDto.Status);
             return Ok(notification);
         }
         catch (ArgumentException)
@@ -90,14 +84,14 @@ public class NotificationsController : ControllerBase
     /// <summary>
     /// Marca todas as notificações como lidas
     /// </summary>
-    [HttpPut("mark-all-read")]
+    [HttpPost("mark-all-read")]
     public async Task<ActionResult> MarkAllAsRead()
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (string.IsNullOrEmpty(userId))
             return Unauthorized();
 
-        await _notificationService.MarkAllAsReadAsync(userId);
+        await notificationService.MarkAllAsReadAsync(userId);
         return Ok();
     }
 
@@ -111,7 +105,7 @@ public class NotificationsController : ControllerBase
         if (string.IsNullOrEmpty(userId))
             return Unauthorized();
 
-        var success = await _notificationService.DeleteNotificationAsync(id, userId);
+        var success = await notificationService.DeleteNotificationAsync(id, userId);
         if (!success)
             return NotFound();
 
