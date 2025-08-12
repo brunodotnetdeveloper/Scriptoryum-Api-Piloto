@@ -610,7 +610,7 @@ public class EscribaService : IEscribaService
         return document;
     }
 
-    private async Task<(string Response, List<string>? Suggestions, int? TokenCount, decimal? Cost, AIProvider? AIProvider, string? ModelUsed, int? ResponseTimeMs)> GenerateAssistantResponseAsync(string message, string? context, string userId, int? documentId = null)
+    private async Task<(string Response, List<string> Suggestions, int? TokenCount, decimal? Cost, AIProvider? AIProvider, string? ModelUsed, int? ResponseTimeMs)> GenerateAssistantResponseAsync(string message, string? context, string userId, int? documentId = null)
     {
         try
         {
@@ -637,7 +637,7 @@ public class EscribaService : IEscribaService
 
             // Obter configuração do provedor ativo (OpenAI)
             var openAIConfig = aiConfig.AIProviderConfigs
-                .FirstOrDefault(p => p.Provider == AIProvider.OpenAI.ToString() && p.IsEnabled);
+                .FirstOrDefault(p => p.IsEnabled);
 
             if (openAIConfig == null || string.IsNullOrEmpty(openAIConfig.ApiKey))
             {
