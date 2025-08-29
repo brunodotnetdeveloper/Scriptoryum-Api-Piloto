@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Pgvector;
@@ -12,9 +13,11 @@ using Scriptoryum.Api.Infrastructure.Context;
 namespace Scriptoryum.Api.Migrations
 {
     [DbContext(typeof(ScriptoryumDbContext))]
-    partial class ScriptoryumDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250820005326_UpdateServiceApiKeyWithOrganizationAndWorkspace")]
+    partial class UpdateServiceApiKeyWithOrganizationAndWorkspace
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -348,10 +351,6 @@ namespace Scriptoryum.Api.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("email_confirmed");
 
-                    b.Property<DateTimeOffset?>("JoinedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("joined_at");
-
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("boolean")
                         .HasColumnName("lockout_enabled");
@@ -370,10 +369,6 @@ namespace Scriptoryum.Api.Migrations
                         .HasColumnType("character varying(256)")
                         .HasColumnName("normalized_user_name");
 
-                    b.Property<int?>("OrganizationId")
-                        .HasColumnType("integer")
-                        .HasColumnName("organization_id");
-
                     b.Property<string>("PasswordHash")
                         .HasColumnType("text")
                         .HasColumnName("password_hash");
@@ -386,27 +381,9 @@ namespace Scriptoryum.Api.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("phone_number_confirmed");
 
-                    b.Property<DateTimeOffset?>("RemovedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("removed_at");
-
-                    b.Property<string>("Role")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("text")
-                        .HasDefaultValue("Member")
-                        .HasColumnName("role");
-
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("text")
                         .HasColumnName("security_stamp");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("text")
-                        .HasDefaultValue("Active")
-                        .HasColumnName("status");
 
                     b.Property<bool>("TwoFactorEnabled")
                         .HasColumnType("boolean")
@@ -426,9 +403,6 @@ namespace Scriptoryum.Api.Migrations
                     b.HasIndex("NormalizedUserName")
                         .IsUnique()
                         .HasDatabaseName("user_name_index");
-
-                    b.HasIndex("OrganizationId")
-                        .HasDatabaseName("i_x_asp_net_users_organization_id");
 
                     b.ToTable("asp_net_users", (string)null);
                 });
@@ -1073,6 +1047,69 @@ namespace Scriptoryum.Api.Migrations
                     b.ToTable("organization_a_i_provider_configs");
                 });
 
+            modelBuilder.Entity("Scriptoryum.Api.Domain.Entities.OrganizationUser", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("NOW()");
+
+                    b.Property<DateTimeOffset>("JoinedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("joined_at");
+
+                    b.Property<int>("OrganizationId")
+                        .HasColumnType("integer")
+                        .HasColumnName("organization_id");
+
+                    b.Property<DateTimeOffset?>("RemovedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("removed_at");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasDefaultValue("Member")
+                        .HasColumnName("role");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasDefaultValue("Active")
+                        .HasColumnName("status");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at")
+                        .HasDefaultValueSql("NOW()");
+
+                    b.Property<string>("UserId")
+                        .HasColumnType("text")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("p_k_organization_users");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("i_x_organization_users_user_id");
+
+                    b.HasIndex("OrganizationId", "UserId")
+                        .IsUnique();
+
+                    b.ToTable("organization_users");
+                });
+
             modelBuilder.Entity("Scriptoryum.Api.Domain.Entities.RiskDetected", b =>
                 {
                     b.Property<int>("Id")
@@ -1528,17 +1565,6 @@ namespace Scriptoryum.Api.Migrations
                     b.Navigation("AIConfiguration");
                 });
 
-            modelBuilder.Entity("Scriptoryum.Api.Domain.Entities.ApplicationUser", b =>
-                {
-                    b.HasOne("Scriptoryum.Api.Domain.Entities.Organization", "Organization")
-                        .WithMany("Users")
-                        .HasForeignKey("OrganizationId")
-                        .OnDelete(DeleteBehavior.SetNull)
-                        .HasConstraintName("f_k_asp_net_users_organizations_organization_id");
-
-                    b.Navigation("Organization");
-                });
-
             modelBuilder.Entity("Scriptoryum.Api.Domain.Entities.ChatMessage", b =>
                 {
                     b.HasOne("Scriptoryum.Api.Domain.Entities.ChatSession", "ChatSession")
@@ -1573,7 +1599,7 @@ namespace Scriptoryum.Api.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .HasConstraintName("f_k_chat_sessions_asp_net_users_user_id");
 
-                    b.HasOne("Scriptoryum.Api.Domain.Entities.Workspace", "Workspace")
+                    b.HasOne("Scriptoryum.Api.Domain.Entities.Workspace", null)
                         .WithMany("ChatSessions")
                         .HasForeignKey("WorkspaceId")
                         .HasConstraintName("f_k_chat_sessions_workspaces_workspace_id");
@@ -1581,8 +1607,6 @@ namespace Scriptoryum.Api.Migrations
                     b.Navigation("Document");
 
                     b.Navigation("User");
-
-                    b.Navigation("Workspace");
                 });
 
             modelBuilder.Entity("Scriptoryum.Api.Domain.Entities.Document", b =>
@@ -1593,14 +1617,12 @@ namespace Scriptoryum.Api.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .HasConstraintName("f_k_documents_asp_net_users_uploaded_by_user_id");
 
-                    b.HasOne("Scriptoryum.Api.Domain.Entities.Workspace", "Workspace")
+                    b.HasOne("Scriptoryum.Api.Domain.Entities.Workspace", null)
                         .WithMany("Documents")
                         .HasForeignKey("WorkspaceId")
                         .HasConstraintName("f_k_documents_workspaces_workspace_id");
 
                     b.Navigation("UploadedByUser");
-
-                    b.Navigation("Workspace");
                 });
 
             modelBuilder.Entity("Scriptoryum.Api.Domain.Entities.DocumentChunk", b =>
@@ -1668,6 +1690,26 @@ namespace Scriptoryum.Api.Migrations
                         .HasConstraintName("f_k_organization_a_i_provider_configs_organizations_organizatio~");
 
                     b.Navigation("Organization");
+                });
+
+            modelBuilder.Entity("Scriptoryum.Api.Domain.Entities.OrganizationUser", b =>
+                {
+                    b.HasOne("Scriptoryum.Api.Domain.Entities.Organization", "Organization")
+                        .WithMany("OrganizationUsers")
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("f_k_organization_users_organizations_organization_id");
+
+                    b.HasOne("Scriptoryum.Api.Domain.Entities.ApplicationUser", "User")
+                        .WithMany("OrganizationUsers")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasConstraintName("f_k_organization_users_asp_net_users_user_id");
+
+                    b.Navigation("Organization");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Scriptoryum.Api.Domain.Entities.RiskDetected", b =>
@@ -1769,6 +1811,8 @@ namespace Scriptoryum.Api.Migrations
 
                     b.Navigation("Notifications");
 
+                    b.Navigation("OrganizationUsers");
+
                     b.Navigation("WorkspaceUsers");
                 });
 
@@ -1794,7 +1838,7 @@ namespace Scriptoryum.Api.Migrations
 
                     b.Navigation("AIProviderConfigs");
 
-                    b.Navigation("Users");
+                    b.Navigation("OrganizationUsers");
 
                     b.Navigation("Workspaces");
                 });

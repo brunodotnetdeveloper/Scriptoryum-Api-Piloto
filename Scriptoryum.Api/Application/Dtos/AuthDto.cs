@@ -53,6 +53,12 @@ public class UserInfoDto
     public string Email { get; set; } = string.Empty;
     public bool EmailConfirmed { get; set; }
     public List<string> Roles { get; set; } = new();
+    public List<OrganizationUserDto> Organizations { get; set; } = new();
+    public List<WorkspaceUserDto> Workspaces { get; set; } = new();
+    public int? CurrentOrganizationId { get; set; }
+    public string CurrentOrganizationName { get; set; }
+    public int? CurrentWorkspaceId { get; set; }
+    public string CurrentWorkspaceName { get; set; }
 }
 
 public class ChangePasswordDto

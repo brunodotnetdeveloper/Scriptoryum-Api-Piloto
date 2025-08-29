@@ -421,7 +421,7 @@ public class Choice
 
 public class Message
 {
-    public string? Content { get; set; }
+    public string Content { get; set; }
 }
 
 public class Usage
@@ -448,7 +448,7 @@ public class ClaudeApiResponse
 
 public class ClaudeContent
 {
-    public string? Text { get; set; }
+    public string Text { get; set; }
 }
 
 public class ClaudeUsage
@@ -476,7 +476,7 @@ public class GeminiContent
 
 public class GeminiPart
 {
-    public string? Text { get; set; }
+    public string Text { get; set; }
 }
 
 public class GeminiUsageMetadata

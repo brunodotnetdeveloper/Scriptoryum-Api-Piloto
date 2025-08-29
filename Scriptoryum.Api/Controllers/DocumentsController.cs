@@ -40,7 +40,7 @@ public class DocumentsController(IDocumentsService documentsService) : Controlle
             return Unauthorized("Usuário não identificado");
         }
 
-        var result = await documentsService.UploadDocumentAsync(uploadDto, userId);
+        var result = await documentsService.UploadDocumentAsync(uploadDto, userId, uploadDto.WorkspaceId);
         
         if (!result.Success)
         {

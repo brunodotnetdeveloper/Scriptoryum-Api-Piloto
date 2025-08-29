@@ -17,6 +17,10 @@ public class Document : EntityBase
     public string UploadedByUserId { get; set; }
     public ApplicationUser UploadedByUser { get; set; }
     
+    // Workspace association
+    public int? WorkspaceId { get; set; }
+    public Workspace Workspace { get; set; }
+    
     public DateTimeOffset UploadedAt { get; set; } = DateTimeOffset.UtcNow;
     public DocumentStatus Status { get; set; } = DocumentStatus.Uploaded;
 

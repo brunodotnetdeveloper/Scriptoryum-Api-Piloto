@@ -11,7 +11,8 @@ namespace Scriptoryum.Api.Application.Services;
 public interface IDocumentsService
 {
     Task<IEnumerable<DocumentsDto>> GetDocumentsByUserAsync(string userId);
-    Task<UploadDocumentResponseDto> UploadDocumentAsync(UploadDocumentDto uploadDto, string userId);
+    Task<IEnumerable<DocumentsDto>> GetDocumentsByWorkspaceAsync(int workspaceId, string userId);
+    Task<UploadDocumentResponseDto> UploadDocumentAsync(UploadDocumentDto uploadDto, string userId, int? workspaceId = null);
     Task<DocumentDetailsDto> GetDocumentDetailsByIdAsync(int id);
     Task<string> GetDocumentDownloadUrlAsync(string storagePath, TimeSpan expiration);
 }
@@ -46,7 +47,28 @@ public class DocumentsService(ScriptoryumDbContext context, ILogger<DocumentsSer
         return documents.Select(MapToDto);
     }
 
-    public async Task<UploadDocumentResponseDto> UploadDocumentAsync(UploadDocumentDto uploadDto, string userId)
+    public async Task<IEnumerable<DocumentsDto>> GetDocumentsByWorkspaceAsync(int workspaceId, string userId)
+    {
+        // Verificar se o usuário tem acesso ao workspace
+        var hasAccess = await context.WorkspaceUsers
+            .AnyAsync(wu => wu.WorkspaceId == workspaceId && wu.UserId == userId && wu.Status == WorkspaceUserStatus.Active.ToString());
+
+        if (!hasAccess)
+        {
+            throw new UnauthorizedAccessException("Usuário não tem acesso a este workspace");
+        }
+
+        // Buscar todos os documentos do workspace
+        var documents = await context.Documents
+            .Where(d => d.WorkspaceId == workspaceId)
+            .Include(d => d.UploadedByUser)
+            .OrderByDescending(d => d.UploadedAt)
+            .ToListAsync();
+
+        return documents.Select(MapToDto);
+    }
+
+    public async Task<UploadDocumentResponseDto> UploadDocumentAsync(UploadDocumentDto uploadDto, string userId, int? workspaceId = null)
     {
         try
         {
@@ -95,6 +117,7 @@ public class DocumentsService(ScriptoryumDbContext context, ILogger<DocumentsSer
                 FileType = _allowedExtensions[fileExtension],
                 FileSize = uploadDto.File.Length,
                 UploadedByUserId = userId,
+                WorkspaceId = workspaceId,
                 UploadedAt = DateTime.UtcNow,
                 Status = DocumentStatus.Uploaded
             };
@@ -176,34 +199,34 @@ public class DocumentsService(ScriptoryumDbContext context, ILogger<DocumentsSer
         return await r2Client.GetPresignedUrlAsync(storagePath, expiration);
     }
 
-    public async Task<DocumentDetailsDto> GetDocumentDetailsByIdAsync(int id)
+    public async Task<DocumentDetailsDto> GetDocumentDetailsByIdAsync(int documentId)
     {
         // Primeiro, carrega o documento
         var document = await context.Documents
             .AsNoTracking()
-            .FirstOrDefaultAsync(d => d.Id == id);
+            .FirstOrDefaultAsync(d => d.Id == documentId);
 
         if (document == null) return null;
 
         // Depois carrega cada relacionamento sequencialmente
         var entities = await context.ExtractedEntities
             .AsNoTracking()
-            .Where(e => e.DocumentId == id)
+            .Where(e => e.DocumentId == documentId)
             .ToListAsync();
 
         var risks = await context.RisksDetected
             .AsNoTracking()
-            .Where(r => r.DocumentId == id)
+            .Where(r => r.DocumentId == documentId)
             .ToListAsync();
 
         var insights = await context.Insights
             .AsNoTracking()
-            .Where(i => i.DocumentId == id)
+            .Where(i => i.DocumentId == documentId)
             .ToListAsync();
 
         var timeline = await context.TimelineEvents
             .AsNoTracking()
-            .Where(t => t.DocumentId == id)
+            .Where(t => t.DocumentId == documentId)
             .ToListAsync();
 
         return new DocumentDetailsDto

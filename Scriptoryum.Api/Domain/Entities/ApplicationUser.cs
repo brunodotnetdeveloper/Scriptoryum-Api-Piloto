@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Identity;
+using Scriptoryum.Api.Domain.Enums;
 
 namespace Scriptoryum.Api.Domain.Entities;
 
@@ -14,4 +15,23 @@ public class ApplicationUser : IdentityUser<string>
     
     // Notificações do usuário
     public ICollection<Notification> Notifications { get; set; } = [];
+    
+    // Organização à qual o usuário pertence
+    public int? OrganizationId { get; set; }
+    public Organization Organization { get; set; }
+    
+    // Papel do usuário na organização
+    public OrganizationRole Role { get; set; } = OrganizationRole.Member;
+    
+    // Status do usuário na organização
+    public OrganizationUserStatus Status { get; set; } = OrganizationUserStatus.Active;
+    
+    // Data em que o usuário foi adicionado à organização
+    public DateTimeOffset? JoinedAt { get; set; }
+    
+    // Data em que o usuário foi removido da organização (se aplicável)
+    public DateTimeOffset? RemovedAt { get; set; }
+    
+    // Workspaces aos quais o usuário tem acesso
+    public ICollection<WorkspaceUser> WorkspaceUsers { get; set; } = [];
 }

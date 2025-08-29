@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Scriptoryum.Api.Services;
+using Scriptoryum.Api.Application.Services;
 using System.Security.Claims;
 
 namespace Scriptoryum.Api.Controllers;
@@ -10,9 +10,9 @@ namespace Scriptoryum.Api.Controllers;
 [Authorize]
 public class ServiceApiKeyController : ControllerBase
 {
-    private readonly IServiceApiKeyService _serviceApiKeyService;
+    private readonly IApiKeyService _serviceApiKeyService;
 
-    public ServiceApiKeyController(IServiceApiKeyService serviceApiKeyService)
+    public ServiceApiKeyController(IApiKeyService serviceApiKeyService)
     {
         _serviceApiKeyService = serviceApiKeyService;
     }
@@ -33,7 +33,9 @@ public class ServiceApiKeyController : ControllerBase
                 request.ExpiresAt,
                 request.Permissions,
                 request.AllowedIPs,
-                userId
+                userId,
+                request.OrganizationId,
+                request.WorkspaceId
             );
 
             return Ok(new CreateApiKeyResponse
@@ -135,7 +137,8 @@ public class ServiceApiKeyController : ControllerBase
             request.ExpiresAt,
             request.Permissions,
             request.AllowedIPs,
-            userId
+            userId,
+            request.WorkspaceId
         );
 
         if (!success)
@@ -162,36 +165,39 @@ public class ServiceApiKeyController : ControllerBase
 public class CreateApiKeyRequest
 {
     public string ServiceName { get; set; } = string.Empty;
-    public string? Description { get; set; }
+    public string Description { get; set; }
     public int? MonthlyUsageLimit { get; set; }
     public DateTime? ExpiresAt { get; set; }
-    public string? Permissions { get; set; }
-    public string? AllowedIPs { get; set; }
+    public string Permissions { get; set; }
+    public string AllowedIPs { get; set; }
+    public int OrganizationId { get; set; }
+    public int? WorkspaceId { get; set; }
 }
 
 public class UpdateApiKeyRequest
 {
     public string ServiceName { get; set; } = string.Empty;
-    public string? Description { get; set; }
+    public string Description { get; set; }
     public int? MonthlyUsageLimit { get; set; }
     public DateTime? ExpiresAt { get; set; }
-    public string? Permissions { get; set; }
-    public string? AllowedIPs { get; set; }
+    public string Permissions { get; set; }
+    public string AllowedIPs { get; set; }
+    public int? WorkspaceId { get; set; }
 }
 
 public class CreateApiKeyResponse
 {
     public int Id { get; set; }
     public string ServiceName { get; set; } = string.Empty;
-    public string? Description { get; set; }
+    public string Description { get; set; }
     public string ApiKey { get; set; } = string.Empty; // Only returned during creation
     public string KeyPrefix { get; set; } = string.Empty;
     public string KeySuffix { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
     public DateTimeOffset? ExpiresAt { get; set; }
     public long? MonthlyUsageLimit { get; set; }
-    public string? Permissions { get; set; }
-    public string? AllowedIPs { get; set; }
+    public string Permissions { get; set; }
+    public string AllowedIPs { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
 }
 
@@ -199,7 +205,7 @@ public class ApiKeyResponse
 {
     public int Id { get; set; }
     public string ServiceName { get; set; } = string.Empty;
-    public string? Description { get; set; }
+    public string Description { get; set; }
     public string KeyPrefix { get; set; } = string.Empty;
     public string KeySuffix { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
@@ -208,7 +214,7 @@ public class ApiKeyResponse
     public long UsageCount { get; set; }
     public long? MonthlyUsageLimit { get; set; }
     public long CurrentMonthUsage { get; set; }
-    public string? Permissions { get; set; }
-    public string? AllowedIPs { get; set; }
+    public string Permissions { get; set; }
+    public string AllowedIPs { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
 }

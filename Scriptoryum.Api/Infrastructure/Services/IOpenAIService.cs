@@ -11,7 +11,7 @@ public interface IOpenAIService
 public class OpenAIRequest
 {
     public string Message { get; set; } = string.Empty;
-    public string? Context { get; set; }
+    public string Context { get; set; }
     public string Model { get; set; } = "gpt-4o-mini";
     public float Temperature { get; set; } = 0.7f;
     public int MaxTokens { get; set; } = 4000;
@@ -26,5 +26,5 @@ public class OpenAIResponse
     public string Model { get; set; } = string.Empty;
     public int ResponseTimeMs { get; set; }
     public bool Success { get; set; }
-    public string? ErrorMessage { get; set; }
+    public string ErrorMessage { get; set; }
 }

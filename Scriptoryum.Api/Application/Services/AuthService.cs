@@ -1,7 +1,10 @@
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Scriptoryum.Api.Application.Dtos;
 using Scriptoryum.Api.Domain.Entities;
+using Scriptoryum.Api.Domain.Enums;
+using Scriptoryum.Api.Infrastructure.Context;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -17,7 +20,7 @@ public interface IAuthService
     string GenerateJwtToken(ApplicationUser user, IList<string> roles);
 }
 
-public class AuthService(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager, IConfiguration configuration, ILogger<AuthService> logger) : IAuthService
+public class AuthService(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager, IConfiguration configuration, ILogger<AuthService> logger, ScriptoryumDbContext context) : IAuthService
 {
     public async Task<AuthResponseDto> RegisterAsync(RegisterDto registerDto)
     {
@@ -261,13 +264,69 @@ public class AuthService(UserManager<ApplicationUser> userManager, SignInManager
 
             var roles = await userManager.GetRolesAsync(user);
 
+            // Get user organizations
+            var organizations = new List<OrganizationUserDto>();
+            if (user.OrganizationId.HasValue && user.Status == OrganizationUserStatus.Active)
+            {
+                var organization = await context.Organizations
+                    .Where(o => o.Id == user.OrganizationId.Value)
+                    .FirstOrDefaultAsync();
+                
+                if (organization != null)
+                {
+                    organizations.Add(new OrganizationUserDto
+                    {
+                        Id = 0, // Não há mais ID específico para OrganizationUser
+                        OrganizationId = organization.Id,
+                        OrganizationName = organization.Name,
+                        UserId = user.Id,
+                        UserName = user.UserName!,
+                        UserEmail = user.Email!,
+                        Role = user.Role.ToString(),
+                        Status = OrganizationUserStatus.Active.ToString(),
+                        JoinedAt = user.JoinedAt ?? DateTimeOffset.UtcNow,
+                        RemovedAt = null
+                    });
+                }
+            }
+
+            // Get user workspaces
+            var workspaceUsers = await context.WorkspaceUsers
+                .Include(wu => wu.Workspace)
+                .Where(wu => wu.UserId == userId && wu.Status == WorkspaceUserStatus.Active.ToString())
+                .ToListAsync();
+
+            var workspaces = workspaceUsers.Select(wu => new WorkspaceUserDto
+            {
+                Id = wu.Id,
+                WorkspaceId = wu.WorkspaceId,
+                WorkspaceName = wu.Workspace.Name,
+                UserId = wu.UserId,
+                UserName = user.UserName!,
+                UserEmail = user.Email!,
+                Role = wu.Role,
+                Status = wu.Status,
+                JoinedAt = wu.JoinedAt,
+                RemovedAt = wu.RemovedAt
+            }).ToList();
+
+            // Set current organization and workspace
+            var currentOrganization = organizations.FirstOrDefault();
+            var currentWorkspace = workspaces.FirstOrDefault();
+
             return new UserInfoDto
             {
                 Id = user.Id,
                 UserName = user.UserName!,
                 Email = user.Email!,
                 EmailConfirmed = user.EmailConfirmed,
-                Roles = roles.ToList()
+                Roles = roles.ToList(),
+                Organizations = organizations,
+                Workspaces = workspaces,
+                CurrentOrganizationId = user.OrganizationId,
+                CurrentOrganizationName = currentOrganization?.OrganizationName,
+                CurrentWorkspaceId = currentWorkspace?.WorkspaceId,
+                CurrentWorkspaceName = currentWorkspace?.WorkspaceName
             };
         }
         catch (Exception ex)

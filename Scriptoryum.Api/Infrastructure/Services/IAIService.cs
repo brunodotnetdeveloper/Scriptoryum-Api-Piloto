@@ -11,7 +11,7 @@ public interface IAIService
 public class AIRequest
 {
     public string Message { get; set; } = string.Empty;
-    public string? Context { get; set; }
+    public string Context { get; set; }
     public string Model { get; set; } = string.Empty;
     public float Temperature { get; set; } = 0.7f;
     public int MaxTokens { get; set; } = 4000;
@@ -27,6 +27,6 @@ public class AIResponse
     public string Model { get; set; } = string.Empty;
     public int ResponseTimeMs { get; set; }
     public bool Success { get; set; }
-    public string? ErrorMessage { get; set; }
+    public string ErrorMessage { get; set; }
     public AIProvider Provider { get; set; }
 }

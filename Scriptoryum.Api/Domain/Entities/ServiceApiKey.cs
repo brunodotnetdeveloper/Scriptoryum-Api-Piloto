@@ -8,11 +8,6 @@ namespace Scriptoryum.Api.Domain.Entities;
 public class ServiceApiKey : EntityBase
 {
     /// <summary>
-    /// Identificador único da chave de API
-    /// </summary>
-    public int Id { get; set; }
-
-    /// <summary>
     /// Nome descritivo do serviço/aplicação
     /// </summary>
     public string ServiceName { get; set; } = string.Empty;
@@ -20,7 +15,7 @@ public class ServiceApiKey : EntityBase
     /// <summary>
     /// Descrição do propósito da chave
     /// </summary>
-    public string? Description { get; set; }
+    public string Description { get; set; }
 
     /// <summary>
     /// A chave de API (hash)
@@ -75,12 +70,12 @@ public class ServiceApiKey : EntityBase
     /// <summary>
     /// Permissões da chave (JSON com endpoints permitidos)
     /// </summary>
-    public string? Permissions { get; set; }
+    public string Permissions { get; set; }
 
     /// <summary>
     /// Endereços IP permitidos (JSON array, opcional)
     /// </summary>
-    public string? AllowedIPs { get; set; }
+    public string AllowedIPs { get; set; }
 
     /// <summary>
     /// ID do usuário que criou a chave
@@ -91,6 +86,26 @@ public class ServiceApiKey : EntityBase
     /// Usuário que criou a chave
     /// </summary>
     public ApplicationUser? CreatedByUser { get; set; }
+
+    /// <summary>
+    /// ID da organização à qual a chave pertence
+    /// </summary>
+    public int OrganizationId { get; set; }
+
+    /// <summary>
+    /// Organização à qual a chave pertence
+    /// </summary>
+    public Organization? Organization { get; set; }
+
+    /// <summary>
+    /// ID do workspace específico (opcional, se null a chave tem acesso a toda a organização)
+    /// </summary>
+    public int? WorkspaceId { get; set; }
+
+    /// <summary>
+    /// Workspace específico (opcional)
+    /// </summary>
+    public Workspace? Workspace { get; set; }
 
     /// <summary>
     /// Verifica se a chave está ativa e não expirou

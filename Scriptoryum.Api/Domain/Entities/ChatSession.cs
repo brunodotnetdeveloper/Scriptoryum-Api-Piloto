@@ -12,6 +12,10 @@ public class ChatSession : EntityBase
     public int? DocumentId { get; set; }
     public Document Document { get; set; }
     
+    // Workspace association
+    public int? WorkspaceId { get; set; }
+    public Workspace? Workspace { get; set; }
+    
     // Metadados da sessão
     public int MessageCount { get; set; } = 0;
     public DateTimeOffset LastActivityAt { get; set; } = DateTimeOffset.UtcNow;

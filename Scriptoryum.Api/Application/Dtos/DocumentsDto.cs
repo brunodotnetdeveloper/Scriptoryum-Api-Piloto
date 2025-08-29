@@ -25,6 +25,8 @@ public class UploadDocumentDto
     
     [StringLength(1000)]
     public string Description { get; set; }
+    
+    public int? WorkspaceId { get; set; }
 }
 
 public class UploadDocumentResponseDto

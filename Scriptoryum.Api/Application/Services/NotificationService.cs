@@ -48,8 +48,8 @@ public class NotificationService : INotificationService
     public async Task<IEnumerable<NotificationDto>> GetUserNotificationsAsync(string userId, int page = 1, int pageSize = 20, NotificationStatus? status = null)
     {
         var query = _context.Notifications
-            .Include(n => n.Document)
-            .Where(n => n.UserId == userId);
+             .Include(n => n.Document)
+             .Where(n => n.UserId == userId);
 
         if (status.HasValue)
         {

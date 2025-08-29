@@ -10,7 +10,6 @@ using Scriptoryum.Api.Infrastructure.Configuration;
 using Scriptoryum.Api.Infrastructure.Context;
 using Scriptoryum.Api.Infrastructure.HealthChecks;
 using Scriptoryum.Api.Infrastructure.Services;
-using Scriptoryum.Api.Services;
 using Scriptoryum.Api.Middleware;
 using StackExchange.Redis;
 using System.Text;
@@ -54,7 +53,9 @@ builder.Services.AddControllers();
 // Register application services
 builder.Services.AddScoped<IDocumentsService, DocumentsService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
-builder.Services.AddScoped<IServiceApiKeyService, ServiceApiKeyService>();
+builder.Services.AddScoped<IApiKeyService, ApiKeyService>();
+builder.Services.AddScoped<IOrganizationService, OrganizationService>();
+builder.Services.AddScoped<IWorkspaceService, WorkspaceService>();
 
 builder.Services.AddScoped<IAuthService, AuthService>();
 

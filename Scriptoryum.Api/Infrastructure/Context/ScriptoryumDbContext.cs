@@ -29,6 +29,17 @@ public class ScriptoryumDbContext(DbContextOptions<ScriptoryumDbContext> options
     
     // Service API Keys
     public DbSet<ServiceApiKey> ServiceApiKeys { get; set; }
+    
+
+    
+    // Organization Management
+    public DbSet<Organization> Organizations { get; set; }
+
+    public DbSet<OrganizationAIProviderConfig> OrganizationAIProviderConfigs { get; set; }
+    
+    // Workspace Management
+    public DbSet<Workspace> Workspaces { get; set; }
+    public DbSet<WorkspaceUser> WorkspaceUsers { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -482,12 +493,169 @@ public class ScriptoryumDbContext(DbContextOptions<ScriptoryumDbContext> options
                 .HasForeignKey(sak => sak.CreatedByUserId)
                 .OnDelete(DeleteBehavior.Restrict);
             
+            // Relationship with Organization
+            entity.HasOne(sak => sak.Organization)
+                .WithMany()
+                .HasForeignKey(sak => sak.OrganizationId)
+                .OnDelete(DeleteBehavior.Restrict);
+            
+            // Relationship with Workspace (optional)
+            entity.HasOne(sak => sak.Workspace)
+                .WithMany(w => w.ServiceApiKeys)
+                .HasForeignKey(sak => sak.WorkspaceId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .IsRequired(false);
+            
             // Indexes for better query performance
             entity.HasIndex(sak => sak.ApiKeyHash)
                 .IsUnique();
             entity.HasIndex(sak => sak.Status);
             entity.HasIndex(sak => sak.CreatedByUserId);
+            entity.HasIndex(sak => sak.OrganizationId);
+            entity.HasIndex(sak => sak.WorkspaceId);
             entity.HasIndex(sak => sak.ExpiresAt);
+        });
+
+        // Configure Organization entity
+        builder.Entity<Organization>(entity =>
+        {
+            entity.HasKey(o => o.Id);
+            
+            entity.Property(o => o.Name)
+                .IsRequired()
+                .HasMaxLength(200);
+            
+            entity.Property(o => o.Cnpj)
+                .HasMaxLength(18);
+            
+            entity.Property(o => o.ContactEmail)
+                .IsRequired()
+                .HasMaxLength(256);
+            
+            entity.Property(o => o.ContactPhone)
+                .HasMaxLength(20);
+            
+            entity.Property(o => o.Address)
+                .HasMaxLength(500);
+            
+            entity.Property(o => o.Status)
+                .IsRequired()
+                .HasConversion<string>()
+                .HasDefaultValue(OrganizationStatus.Active);
+        });
+
+        // Configure ApplicationUser entity
+        builder.Entity<ApplicationUser>(entity =>
+        {
+            entity.Property(u => u.Role)
+                .IsRequired()
+                .HasConversion<string>()
+                .HasDefaultValue(OrganizationRole.Member);
+            
+            entity.Property(u => u.Status)
+                .IsRequired()
+                .HasConversion<string>()
+                .HasDefaultValue(OrganizationUserStatus.Active);
+            
+            // Relationship with Organization
+            entity.HasOne(u => u.Organization)
+                .WithMany(o => o.Users)
+                .HasForeignKey(u => u.OrganizationId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .IsRequired(false);
+        });
+
+        // Configure Workspace entity
+        builder.Entity<Workspace>(entity =>
+        {
+            entity.HasKey(w => w.Id);
+            
+            entity.Property(w => w.Name)
+                .IsRequired()
+                .HasMaxLength(200);
+            
+            entity.Property(w => w.Description)
+                .HasMaxLength(1000);
+            
+            entity.Property(w => w.Status)
+                .IsRequired()
+                .HasConversion<string>()
+                .HasDefaultValue(WorkspaceStatus.Active);
+            
+            // Relationship with Organization
+            entity.HasOne(w => w.Organization)
+                .WithMany(o => o.Workspaces)
+                .HasForeignKey(w => w.OrganizationId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+
+
+        // Configure WorkspaceUser entity
+        builder.Entity<WorkspaceUser>(entity =>
+        {
+            entity.HasKey(wu => wu.Id);
+            
+            entity.Property(wu => wu.Role)
+                .IsRequired()
+                .HasConversion<string>()
+                .HasDefaultValue(WorkspaceRole.Member);
+            
+            entity.Property(wu => wu.Status)
+                .IsRequired()
+                .HasConversion<string>()
+                .HasDefaultValue(WorkspaceUserStatus.Active);
+            
+            // Relationships
+            entity.HasOne(wu => wu.Workspace)
+                .WithMany(w => w.WorkspaceUsers)
+                .HasForeignKey(wu => wu.WorkspaceId)
+                .OnDelete(DeleteBehavior.Cascade);
+            
+            entity.HasOne(wu => wu.User)
+                .WithMany(u => u.WorkspaceUsers)
+                .HasForeignKey(wu => wu.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+            
+            // Unique constraint: one user per workspace
+            entity.HasIndex(wu => new { wu.WorkspaceId, wu.UserId })
+                .IsUnique();
+        });
+
+        // Configure OrganizationAIProviderConfig entity
+        builder.Entity<OrganizationAIProviderConfig>(entity =>
+        {
+            entity.HasKey(oapc => oapc.Id);
+            
+            entity.Property(oapc => oapc.Provider)
+                .IsRequired()
+                .HasMaxLength(50);
+            
+            entity.Property(oapc => oapc.ApiKey)
+                .IsRequired()
+                .HasMaxLength(500); // Encrypted key can be longer
+            
+            entity.Property(oapc => oapc.SelectedModel)
+                .IsRequired()
+                .HasMaxLength(100);
+            
+            entity.Property(oapc => oapc.IsEnabled)
+                .HasDefaultValue(true);
+            
+            entity.Property(oapc => oapc.LastTestMessage)
+                .HasMaxLength(1000);
+            
+            entity.Property(oapc => oapc.MonthlyTokenLimit)
+                .HasDefaultValue(null);
+            
+            entity.Property(oapc => oapc.TokensUsedThisMonth)
+                .HasDefaultValue(0);
+            
+            // Relationship with Organization
+            entity.HasOne(oapc => oapc.Organization)
+                .WithMany(o => o.AIProviderConfigs)
+                .HasForeignKey(oapc => oapc.OrganizationId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         // Configure EntityBase properties for all entities

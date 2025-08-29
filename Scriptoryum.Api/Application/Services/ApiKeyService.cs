@@ -5,33 +5,30 @@ using Scriptoryum.Api.Domain.Entities;
 using Scriptoryum.Api.Domain.Enums;
 using Scriptoryum.Api.Infrastructure.Context;
 
-namespace Scriptoryum.Api.Services;
+namespace Scriptoryum.Api.Application.Services;
 
-public interface IServiceApiKeyService
+public interface IApiKeyService
 {
     Task<(ServiceApiKey apiKey, string plainKey)> CreateApiKeyAsync(string serviceName, string description, 
-        int? monthlyUsageLimit, DateTime? expiresAt, string? permissions, string? allowedIPs, string createdByUserId);
-    Task<ServiceApiKey?> ValidateApiKeyAsync(string apiKey);
+        int? monthlyUsageLimit, DateTime? expiresAt, string permissions, string allowedIPs, 
+        string createdByUserId, int organizationId, int? workspaceId = null);
+    Task<ServiceApiKey> ValidateApiKeyAsync(string apiKey);
     Task<bool> RevokeApiKeyAsync(int id, string userId);
     Task<List<ServiceApiKey>> GetApiKeysAsync(string userId);
-    Task<ServiceApiKey?> GetApiKeyByIdAsync(int id, string userId);
+    Task<ServiceApiKey> GetApiKeyByIdAsync(int id, string userId);
     Task<bool> UpdateApiKeyAsync(int id, string serviceName, string description, 
-        int? monthlyUsageLimit, DateTime? expiresAt, string? permissions, string? allowedIPs, string userId);
+        int? monthlyUsageLimit, DateTime? expiresAt, string permissions, string allowedIPs, 
+        string userId, int? workspaceId = null);
 }
 
-public class ServiceApiKeyService : IServiceApiKeyService
+public class ApiKeyService(ScriptoryumDbContext context) : IApiKeyService
 {
-    private readonly ScriptoryumDbContext _context;
     private const string KeyPrefix = "sk-";
     private const int KeyLength = 48; // Total length including prefix
 
-    public ServiceApiKeyService(ScriptoryumDbContext context)
-    {
-        _context = context;
-    }
-
     public async Task<(ServiceApiKey apiKey, string plainKey)> CreateApiKeyAsync(string serviceName, string description,
-        int? monthlyUsageLimit, DateTime? expiresAt, string? permissions, string? allowedIPs, string createdByUserId)
+        int? monthlyUsageLimit, DateTime? expiresAt, string permissions, string allowedIPs, 
+        string createdByUserId, int organizationId, int? workspaceId = null)
     {
         // Generate a secure random API key
         var plainKey = GenerateApiKey();
@@ -54,24 +51,26 @@ public class ServiceApiKeyService : IServiceApiKeyService
             Permissions = permissions,
             AllowedIPs = allowedIPs,
             CreatedByUserId = createdByUserId,
+            OrganizationId = organizationId,
+            WorkspaceId = workspaceId,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
 
-        _context.ServiceApiKeys.Add(apiKey);
-        await _context.SaveChangesAsync();
+        context.ServiceApiKeys.Add(apiKey);
+        await context.SaveChangesAsync();
 
         return (apiKey, plainKey);
     }
 
-    public async Task<ServiceApiKey?> ValidateApiKeyAsync(string apiKey)
+    public async Task<ServiceApiKey> ValidateApiKeyAsync(string apiKey)
     {
         if (string.IsNullOrEmpty(apiKey))
             return null;
 
         var keyHash = HashApiKey(apiKey);
         
-        var serviceApiKey = await _context.ServiceApiKeys
+        var serviceApiKey = await context.ServiceApiKeys
             .Include(sak => sak.CreatedByUser)
             .FirstOrDefaultAsync(sak => sak.ApiKeyHash == keyHash);
 
@@ -87,14 +86,14 @@ public class ServiceApiKeyService : IServiceApiKeyService
         serviceApiKey.LastUsedAt = DateTime.UtcNow;
         serviceApiKey.UpdatedAt = DateTime.UtcNow;
 
-        await _context.SaveChangesAsync();
+        await context.SaveChangesAsync();
 
         return serviceApiKey;
     }
 
     public async Task<bool> RevokeApiKeyAsync(int id, string userId)
     {
-        var apiKey = await _context.ServiceApiKeys
+        var apiKey = await context.ServiceApiKeys
             .FirstOrDefaultAsync(sak => sak.Id == id && sak.CreatedByUserId == userId);
 
         if (apiKey == null)
@@ -103,28 +102,29 @@ public class ServiceApiKeyService : IServiceApiKeyService
         apiKey.Status = ServiceApiKeyStatus.Revoked;
         apiKey.UpdatedAt = DateTime.UtcNow;
 
-        await _context.SaveChangesAsync();
+        await context.SaveChangesAsync();
         return true;
     }
 
     public async Task<List<ServiceApiKey>> GetApiKeysAsync(string userId)
     {
-        return await _context.ServiceApiKeys
+        return await context.ServiceApiKeys
             .Where(sak => sak.CreatedByUserId == userId)
             .OrderByDescending(sak => sak.CreatedAt)
             .ToListAsync();
     }
 
-    public async Task<ServiceApiKey?> GetApiKeyByIdAsync(int id, string userId)
+    public async Task<ServiceApiKey> GetApiKeyByIdAsync(int id, string userId)
     {
-        return await _context.ServiceApiKeys
+        return await context.ServiceApiKeys
             .FirstOrDefaultAsync(sak => sak.Id == id && sak.CreatedByUserId == userId);
     }
 
     public async Task<bool> UpdateApiKeyAsync(int id, string serviceName, string description,
-        int? monthlyUsageLimit, DateTime? expiresAt, string? permissions, string? allowedIPs, string userId)
+        int? monthlyUsageLimit, DateTime? expiresAt, string permissions, string allowedIPs, 
+        string userId, int? workspaceId = null)
     {
-        var apiKey = await _context.ServiceApiKeys
+        var apiKey = await context.ServiceApiKeys
             .FirstOrDefaultAsync(sak => sak.Id == id && sak.CreatedByUserId == userId);
 
         if (apiKey == null)
@@ -136,9 +136,10 @@ public class ServiceApiKeyService : IServiceApiKeyService
         apiKey.ExpiresAt = expiresAt;
         apiKey.Permissions = permissions;
         apiKey.AllowedIPs = allowedIPs;
+        apiKey.WorkspaceId = workspaceId;
         apiKey.UpdatedAt = DateTime.UtcNow;
 
-        await _context.SaveChangesAsync();
+        await context.SaveChangesAsync();
         return true;
     }
 

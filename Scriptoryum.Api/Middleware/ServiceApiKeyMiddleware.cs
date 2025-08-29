@@ -1,4 +1,4 @@
-using Scriptoryum.Api.Services;
+using Scriptoryum.Api.Application.Services;
 using System.Security.Claims;
 using System.Text.Json.Serialization;
 
@@ -28,7 +28,7 @@ public class ServiceApiKeyMiddleware
             _logger.LogInformation("Tentando autenticar usando ServiceApiKey: {ApiKeyPrefix}...", apiKey.Substring(0, Math.Min(8, apiKey.Length)));
 
             using var scope = _serviceProvider.CreateScope();
-            var serviceApiKeyService = scope.ServiceProvider.GetRequiredService<IServiceApiKeyService>();
+            var serviceApiKeyService = scope.ServiceProvider.GetRequiredService<IApiKeyService>();
 
             var serviceApiKeyEntity = await serviceApiKeyService.ValidateApiKeyAsync(apiKey);
 

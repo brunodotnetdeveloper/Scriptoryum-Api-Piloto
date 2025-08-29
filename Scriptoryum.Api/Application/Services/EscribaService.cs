@@ -600,7 +600,7 @@ public class EscribaService : IEscribaService
         }
     }
 
-    private async Task<string?> GetDocumentNameAsync(int documentId)
+    private async Task<string> GetDocumentNameAsync(int documentId)
     {
         var document = await _context.Documents
             .Where(d => d.Id == documentId)
@@ -610,7 +610,7 @@ public class EscribaService : IEscribaService
         return document;
     }
 
-    private async Task<(string Response, List<string> Suggestions, int? TokenCount, decimal? Cost, AIProvider? AIProvider, string? ModelUsed, int? ResponseTimeMs)> GenerateAssistantResponseAsync(string message, string? context, string userId, int? documentId = null)
+    private async Task<(string Response, List<string> Suggestions, int? TokenCount, decimal? Cost, AIProvider? AIProvider, string ModelUsed, int? ResponseTimeMs)> GenerateAssistantResponseAsync(string message, string context, string userId, int? documentId = null)
     {
         try
         {
@@ -811,7 +811,7 @@ public class EscribaService : IEscribaService
             {
                 Id = m.Id,
                 ChatSessionId = m.ChatSessionId,
-                Role = m.Role,
+                Role = m.Role.ToString(),
                 Content = m.Content,
                 DocumentId = m.DocumentId,
                 DocumentName = m.DocumentName,
