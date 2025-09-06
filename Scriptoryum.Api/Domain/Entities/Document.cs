@@ -21,6 +21,10 @@ public class Document : EntityBase
     public int? WorkspaceId { get; set; }
     public Workspace Workspace { get; set; }
     
+    // Document Type association
+    public int? DocumentTypeId { get; set; }
+    public DocumentType DocumentType { get; set; }
+    
     public DateTimeOffset UploadedAt { get; set; } = DateTimeOffset.UtcNow;
     public DocumentStatus Status { get; set; } = DocumentStatus.Uploaded;
 
@@ -33,4 +37,5 @@ public class Document : EntityBase
     public ICollection<Insight> Insights { get; set; } = [];
     public ICollection<RiskDetected> RisksDetected { get; set; } = [];
     public ICollection<TimelineEvent> TimelineEvents { get; set; } = [];
+    public ICollection<DocumentFieldValue> FieldValues { get; set; } = [];
 }

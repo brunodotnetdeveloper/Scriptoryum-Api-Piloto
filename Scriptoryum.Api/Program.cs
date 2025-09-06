@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Scriptoryum.Api.Application.Interfaces;
 using Scriptoryum.Api.Application.Services;
 using Scriptoryum.Api.Domain.Entities;
 using Scriptoryum.Api.Infrastructure.Clients;
@@ -56,6 +57,9 @@ builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IApiKeyService, ApiKeyService>();
 builder.Services.AddScoped<IOrganizationService, OrganizationService>();
 builder.Services.AddScoped<IWorkspaceService, WorkspaceService>();
+builder.Services.AddScoped<IDocumentFieldService, DocumentFieldService>();
+builder.Services.AddScoped<IDocumentTypeService, DocumentTypeService>();
+builder.Services.AddScoped<IDocumentTypeTemplateService, DocumentTypeTemplateService>();
 
 builder.Services.AddScoped<IAuthService, AuthService>();
 

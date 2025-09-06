@@ -35,3 +35,13 @@ public class UploadDocumentResponseDto
     public string Message { get; set; }
     public bool Success { get; set; }
 }
+
+public class DocumentOperationResponseDto
+{
+    public bool Success { get; set; }
+    public string Message { get; set; } = string.Empty;
+    public int? DocumentId { get; set; }
+    public List<string> Errors { get; set; } = [];
+    public List<string> Warnings { get; set; } = [];
+    public string? ErrorCode { get; set; }
+}

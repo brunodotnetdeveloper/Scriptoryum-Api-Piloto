@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Pgvector;
@@ -12,9 +13,11 @@ using Scriptoryum.Api.Infrastructure.Context;
 namespace Scriptoryum.Api.Migrations
 {
     [DbContext(typeof(ScriptoryumDbContext))]
-    partial class ScriptoryumDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250830223636_AddEntitiesDynamicFields")]
+    partial class AddEntitiesDynamicFields
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -685,20 +688,13 @@ namespace Scriptoryum.Api.Migrations
                     b.HasIndex("DocumentTypeId")
                         .HasDatabaseName("i_x_documents_document_type_id");
 
-                    b.HasIndex("Status");
-
-                    b.HasIndex("UploadedAt");
-
                     b.HasIndex("UploadedByUserId")
                         .HasDatabaseName("i_x_documents_uploaded_by_user_id");
 
                     b.HasIndex("WorkspaceId")
                         .HasDatabaseName("i_x_documents_workspace_id");
 
-                    b.ToTable("documents", t =>
-                        {
-                            t.HasCheckConstraint("CK_Document_OrganizationalIntegrity", "document_type_id IS NULL OR EXISTS (SELECT 1 FROM workspaces w INNER JOIN document_types dt ON dt.organization_id = w.organization_id WHERE w.id = workspace_id AND dt.id = document_type_id)");
-                        });
+                    b.ToTable("documents");
                 });
 
             modelBuilder.Entity("Scriptoryum.Api.Domain.Entities.DocumentChunk", b =>
@@ -1102,7 +1098,7 @@ namespace Scriptoryum.Api.Migrations
                         .HasColumnType("character varying(100)")
                         .HasColumnName("name");
 
-                    b.Property<int>("OrganizationId")
+                    b.Property<int?>("OrganizationId")
                         .HasColumnType("integer")
                         .HasColumnName("organization_id");
 
@@ -2001,7 +1997,6 @@ namespace Scriptoryum.Api.Migrations
                     b.HasOne("Scriptoryum.Api.Domain.Entities.DocumentType", "DocumentType")
                         .WithMany("Documents")
                         .HasForeignKey("DocumentTypeId")
-                        .OnDelete(DeleteBehavior.Restrict)
                         .HasConstraintName("f_k_documents_document_types_document_type_id");
 
                     b.HasOne("Scriptoryum.Api.Domain.Entities.ApplicationUser", "UploadedByUser")
@@ -2013,7 +2008,6 @@ namespace Scriptoryum.Api.Migrations
                     b.HasOne("Scriptoryum.Api.Domain.Entities.Workspace", "Workspace")
                         .WithMany("Documents")
                         .HasForeignKey("WorkspaceId")
-                        .OnDelete(DeleteBehavior.Restrict)
                         .HasConstraintName("f_k_documents_workspaces_workspace_id");
 
                     b.Navigation("DocumentType");
@@ -2119,8 +2113,7 @@ namespace Scriptoryum.Api.Migrations
                     b.HasOne("Scriptoryum.Api.Domain.Entities.Organization", "Organization")
                         .WithMany()
                         .HasForeignKey("OrganizationId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
+                        .OnDelete(DeleteBehavior.SetNull)
                         .HasConstraintName("f_k_document_type_templates_organizations_organization_id");
 
                     b.Navigation("CreatedByUser");

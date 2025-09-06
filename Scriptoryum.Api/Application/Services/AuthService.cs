@@ -346,9 +346,13 @@ public class AuthService(UserManager<ApplicationUser> userManager, SignInManager
             new(ClaimTypes.NameIdentifier, user.Id),
             new(ClaimTypes.Name, user.UserName!),
             new(ClaimTypes.Email, user.Email!),
+            // Adiciona claim OrganizationId se existir
+            user.OrganizationId.HasValue
+                ? new Claim("OrganizationId", user.OrganizationId.Value.ToString())
+                : null,
             new("jti", Guid.NewGuid().ToString()),
             new("iat", DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64)
-        };
+        }.Where(c => c != null).ToList();
 
         // Adicionar roles como claims
         foreach (var role in roles)

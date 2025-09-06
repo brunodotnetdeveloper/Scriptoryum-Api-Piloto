@@ -40,6 +40,13 @@ public class ScriptoryumDbContext(DbContextOptions<ScriptoryumDbContext> options
     // Workspace Management
     public DbSet<Workspace> Workspaces { get; set; }
     public DbSet<WorkspaceUser> WorkspaceUsers { get; set; }
+    
+    // Document Type Management
+    public DbSet<DocumentType> DocumentTypes { get; set; }
+    public DbSet<DocumentTypeField> DocumentTypeFields { get; set; }
+    public DbSet<DocumentTypeTemplate> DocumentTypeTemplates { get; set; }
+    public DbSet<DocumentFieldValue> DocumentFieldValues { get; set; }
+    public DbSet<DocumentFieldValueHistory> DocumentFieldValueHistories { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -143,6 +150,25 @@ public class ScriptoryumDbContext(DbContextOptions<ScriptoryumDbContext> options
                 .WithMany(u => u.Documents)
                 .HasForeignKey(d => d.UploadedByUserId)
                 .OnDelete(DeleteBehavior.Restrict);
+            
+            // Relationship with Workspace
+            entity.HasOne(d => d.Workspace)
+                .WithMany(w => w.Documents)
+                .HasForeignKey(d => d.WorkspaceId)
+                .OnDelete(DeleteBehavior.Restrict);
+            
+            // Relationship with DocumentType
+            entity.HasOne(d => d.DocumentType)
+                .WithMany(dt => dt.Documents)
+                .HasForeignKey(d => d.DocumentTypeId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .IsRequired(false);
+            
+            // Index for better query performance
+            entity.HasIndex(d => d.WorkspaceId);
+            entity.HasIndex(d => d.DocumentTypeId);
+            entity.HasIndex(d => d.Status);
+            entity.HasIndex(d => d.UploadedAt);
         });
 
         builder.Entity<DocumentChunk>(entity =>
@@ -563,6 +589,9 @@ public class ScriptoryumDbContext(DbContextOptions<ScriptoryumDbContext> options
                 .HasForeignKey(u => u.OrganizationId)
                 .OnDelete(DeleteBehavior.SetNull)
                 .IsRequired(false);
+            
+            // Index for organization-based queries
+            entity.HasIndex(u => u.OrganizationId);
         });
 
         // Configure Workspace entity
@@ -587,6 +616,9 @@ public class ScriptoryumDbContext(DbContextOptions<ScriptoryumDbContext> options
                 .WithMany(o => o.Workspaces)
                 .HasForeignKey(w => w.OrganizationId)
                 .OnDelete(DeleteBehavior.Cascade);
+            
+            // Index for organization-based queries
+            entity.HasIndex(w => w.OrganizationId);
         });
 
 
@@ -656,6 +688,263 @@ public class ScriptoryumDbContext(DbContextOptions<ScriptoryumDbContext> options
                 .WithMany(o => o.AIProviderConfigs)
                 .HasForeignKey(oapc => oapc.OrganizationId)
                 .OnDelete(DeleteBehavior.Cascade);
+            
+            // Index for organization-based queries
+            entity.HasIndex(oapc => oapc.OrganizationId);
+        });
+
+        // Configure DocumentType entity
+        builder.Entity<DocumentType>(entity =>
+        {
+            entity.HasKey(dt => dt.Id);
+            
+            entity.Property(dt => dt.Name)
+                .IsRequired()
+                .HasMaxLength(100);
+            
+            entity.Property(dt => dt.Description)
+                .HasMaxLength(500);
+            
+            entity.Property(dt => dt.Status)
+                .IsRequired()
+                .HasMaxLength(20)
+                .HasDefaultValue("Active");
+            
+            entity.Property(dt => dt.IsSystemDefault)
+                .HasDefaultValue(false);
+            
+            entity.Property(dt => dt.CreatedAt)
+                .HasDefaultValueSql("NOW()");
+            
+            entity.Property(dt => dt.UpdatedAt)
+                .HasDefaultValueSql("NOW()");
+            
+            // Relationship with Organization
+            entity.HasOne(dt => dt.Organization)
+                .WithMany()
+                .HasForeignKey(dt => dt.OrganizationId)
+                .OnDelete(DeleteBehavior.Restrict);
+            
+            // Index for better query performance
+            entity.HasIndex(dt => new { dt.OrganizationId, dt.Name })
+                .IsUnique();
+            entity.HasIndex(dt => dt.Status);
+        });
+
+        // Configure DocumentTypeField entity
+        builder.Entity<DocumentTypeField>(entity =>
+        {
+            entity.HasKey(dtf => dtf.Id);
+            
+            entity.Property(dtf => dtf.FieldName)
+                .IsRequired()
+                .HasMaxLength(100);
+            
+            entity.Property(dtf => dtf.FieldType)
+                .IsRequired()
+                .HasMaxLength(20);
+            
+            entity.Property(dtf => dtf.Description)
+                .HasMaxLength(500);
+            
+            entity.Property(dtf => dtf.ExtractionPrompt)
+                .HasColumnType("text");
+            
+            entity.Property(dtf => dtf.IsRequired)
+                .HasDefaultValue(false);
+            
+            entity.Property(dtf => dtf.ValidationRegex)
+                .HasMaxLength(500);
+            
+            entity.Property(dtf => dtf.DefaultValue)
+                .HasMaxLength(500);
+            
+            entity.Property(dtf => dtf.FieldOrder)
+                .HasDefaultValue(1);
+            
+            entity.Property(dtf => dtf.Status)
+                .IsRequired()
+                .HasMaxLength(20)
+                .HasDefaultValue("Active");
+            
+            entity.Property(dtf => dtf.CreatedAt)
+                .HasDefaultValueSql("NOW()");
+            
+            entity.Property(dtf => dtf.UpdatedAt)
+                .HasDefaultValueSql("NOW()");
+            
+            // Relationship with DocumentType
+            entity.HasOne(dtf => dtf.DocumentType)
+                .WithMany(dt => dt.Fields)
+                .HasForeignKey(dtf => dtf.DocumentTypeId)
+                .OnDelete(DeleteBehavior.Cascade);
+            
+            // Index for better query performance
+            entity.HasIndex(dtf => new { dtf.DocumentTypeId, dtf.FieldName })
+                .IsUnique();
+            entity.HasIndex(dtf => dtf.FieldOrder);
+        });
+
+        // Configure DocumentTypeTemplate entity
+        builder.Entity<DocumentTypeTemplate>(entity =>
+        {
+            entity.HasKey(dtt => dtt.Id);
+            
+            entity.Property(dtt => dtt.Name)
+                .IsRequired()
+                .HasMaxLength(100);
+            
+            entity.Property(dtt => dtt.Description)
+                .HasMaxLength(500);
+            
+            entity.Property(dtt => dtt.Category)
+                .HasMaxLength(50);
+            
+            entity.Property(dtt => dtt.TemplateData)
+                .IsRequired()
+                .HasColumnType("jsonb");
+            
+            entity.Property(dtt => dtt.IsPublic)
+                .HasDefaultValue(true);
+            
+            entity.Property(dtt => dtt.UsageCount)
+                .HasDefaultValue(0);
+            
+            entity.Property(dtt => dtt.CreatedByUserId)
+                .HasMaxLength(450);
+            
+            entity.Property(dtt => dtt.CreatedAt)
+                .HasDefaultValueSql("NOW()");
+            
+            entity.Property(dtt => dtt.UpdatedAt)
+                .HasDefaultValueSql("NOW()");
+            
+            // Relationship with Organization (required)
+            entity.HasOne(dtt => dtt.Organization)
+                .WithMany()
+                .HasForeignKey(dtt => dtt.OrganizationId)
+                .OnDelete(DeleteBehavior.Restrict);
+            
+            // Relationship with ApplicationUser (optional)
+            entity.HasOne(dtt => dtt.CreatedByUser)
+                .WithMany()
+                .HasForeignKey(dtt => dtt.CreatedByUserId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .IsRequired(false);
+            
+            // Index for better query performance
+            entity.HasIndex(dtt => dtt.Category);
+            entity.HasIndex(dtt => dtt.IsPublic);
+            entity.HasIndex(dtt => dtt.OrganizationId);
+            entity.HasIndex(dtt => dtt.UsageCount);
+        });
+
+        // Configure DocumentFieldValue entity
+        builder.Entity<DocumentFieldValue>(entity =>
+        {
+            entity.HasKey(dfv => dfv.Id);
+            
+            entity.Property(dfv => dfv.ExtractedValue)
+                .HasColumnType("text");
+            
+            entity.Property(dfv => dfv.ConfidenceScore)
+                .HasPrecision(5, 4)
+                .HasDefaultValue(0.0m);
+            
+            entity.Property(dfv => dfv.ValidationStatus)
+                .IsRequired()
+                .HasMaxLength(20)
+                .HasDefaultValue("Pending");
+            
+            entity.Property(dfv => dfv.ContextExcerpt)
+                .HasMaxLength(2000);
+            
+            entity.Property(dfv => dfv.CorrectedValue)
+                .HasColumnType("text");
+            
+            entity.Property(dfv => dfv.ExtractionMetadata)
+                .HasColumnType("jsonb");
+            
+            entity.Property(dfv => dfv.ValidatedAt)
+                .IsRequired(false);
+            
+            entity.Property(dfv => dfv.ValidatedByUserId)
+                .HasMaxLength(450)
+                .IsRequired(false);
+            
+            entity.Property(dfv => dfv.CreatedAt)
+                .HasDefaultValueSql("NOW()");
+            
+            entity.Property(dfv => dfv.UpdatedAt)
+                .HasDefaultValueSql("NOW()");
+            
+            // Relationship with Document
+            entity.HasOne(dfv => dfv.Document)
+                .WithMany(d => d.FieldValues)
+                .HasForeignKey(dfv => dfv.DocumentId)
+                .OnDelete(DeleteBehavior.Cascade);
+            
+            // Relationship with DocumentTypeField
+            entity.HasOne(dfv => dfv.DocumentTypeField)
+                .WithMany(dtf => dtf.FieldValues)
+                .HasForeignKey(dfv => dfv.DocumentTypeFieldId)
+                .OnDelete(DeleteBehavior.Restrict);
+            
+            // Relationship with ApplicationUser (validator)
+            entity.HasOne(dfv => dfv.ValidatedByUser)
+                .WithMany()
+                .HasForeignKey(dfv => dfv.ValidatedByUserId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .IsRequired(false);
+            
+            // Index for better query performance
+            entity.HasIndex(dfv => new { dfv.DocumentId, dfv.DocumentTypeFieldId })
+                .IsUnique();
+            entity.HasIndex(dfv => dfv.ValidationStatus);
+            entity.HasIndex(dfv => dfv.ValidatedAt);
+        });
+
+        // Configure DocumentFieldValueHistory entity
+        builder.Entity<DocumentFieldValueHistory>(entity =>
+        {
+            entity.HasKey(dfvh => dfvh.Id);
+            
+            entity.Property(dfvh => dfvh.PreviousValue)
+                .HasColumnType("text");
+            
+            entity.Property(dfvh => dfvh.NewValue)
+                .HasColumnType("text");
+            
+            entity.Property(dfvh => dfvh.ChangeReason)
+                .HasMaxLength(500);
+            
+            entity.Property(dfvh => dfvh.ChangedByUserId)
+                .HasMaxLength(450)
+                .IsRequired(false);
+                        
+            entity.Property(dfvh => dfvh.CreatedAt)
+                .HasDefaultValueSql("NOW()");
+            
+            entity.Property(dfvh => dfvh.UpdatedAt)
+                .HasDefaultValueSql("NOW()");
+            
+            // Relationship with DocumentFieldValue
+            entity.HasOne(dfvh => dfvh.DocumentFieldValue)
+                .WithMany(dfv => dfv.History)
+                .HasForeignKey(dfvh => dfvh.DocumentFieldValueId)
+                .OnDelete(DeleteBehavior.Cascade);
+            
+            // Relationship with ApplicationUser (who made the change)
+            entity.HasOne(dfvh => dfvh.ChangedByUser)
+                .WithMany()
+                .HasForeignKey(dfvh => dfvh.ChangedByUserId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .IsRequired(false);
+            
+            // Index for better query performance
+            entity.HasIndex(dfvh => dfvh.DocumentFieldValueId);
+            entity.HasIndex(dfvh => dfvh.UpdatedAt);
+            entity.HasIndex(dfvh => dfvh.ChangedByUserId);
         });
 
         // Configure EntityBase properties for all entities
@@ -672,6 +961,16 @@ public class ScriptoryumDbContext(DbContextOptions<ScriptoryumDbContext> options
                     .HasDefaultValueSql("NOW()");
             }
         }
+        
+        // Add organizational integrity constraint
+        // Ensures that a document can only use document types from the same organization as its workspace
+        builder.Entity<Document>()
+            .ToTable(tb => tb.HasCheckConstraint(
+                "CK_Document_OrganizationalIntegrity",
+                "document_type_id IS NULL OR EXISTS (" +
+                "SELECT 1 FROM workspaces w " +
+                "INNER JOIN document_types dt ON dt.organization_id = w.organization_id " +
+                "WHERE w.id = workspace_id AND dt.id = document_type_id)"));
     }
 
     private static string ToSnakeCase(string input)
