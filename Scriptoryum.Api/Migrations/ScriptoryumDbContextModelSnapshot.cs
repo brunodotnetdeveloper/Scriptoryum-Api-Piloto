@@ -695,10 +695,7 @@ namespace Scriptoryum.Api.Migrations
                     b.HasIndex("WorkspaceId")
                         .HasDatabaseName("i_x_documents_workspace_id");
 
-                    b.ToTable("documents", t =>
-                        {
-                            t.HasCheckConstraint("CK_Document_OrganizationalIntegrity", "document_type_id IS NULL OR EXISTS (SELECT 1 FROM workspaces w INNER JOIN document_types dt ON dt.organization_id = w.organization_id WHERE w.id = workspace_id AND dt.id = document_type_id)");
-                        });
+                    b.ToTable("documents");
                 });
 
             modelBuilder.Entity("Scriptoryum.Api.Domain.Entities.DocumentChunk", b =>

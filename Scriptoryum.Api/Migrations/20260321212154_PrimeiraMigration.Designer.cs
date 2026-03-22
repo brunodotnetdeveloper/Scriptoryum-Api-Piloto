@@ -13,8 +13,8 @@ using Scriptoryum.Api.Infrastructure.Context;
 namespace Scriptoryum.Api.Migrations
 {
     [DbContext(typeof(ScriptoryumDbContext))]
-    [Migration("20250820005326_UpdateServiceApiKeyWithOrganizationAndWorkspace")]
-    partial class UpdateServiceApiKeyWithOrganizationAndWorkspace
+    [Migration("20260321212154_PrimeiraMigration")]
+    partial class PrimeiraMigration
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -351,6 +351,10 @@ namespace Scriptoryum.Api.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("email_confirmed");
 
+                    b.Property<DateTimeOffset?>("JoinedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("joined_at");
+
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("boolean")
                         .HasColumnName("lockout_enabled");
@@ -369,6 +373,10 @@ namespace Scriptoryum.Api.Migrations
                         .HasColumnType("character varying(256)")
                         .HasColumnName("normalized_user_name");
 
+                    b.Property<int?>("OrganizationId")
+                        .HasColumnType("integer")
+                        .HasColumnName("organization_id");
+
                     b.Property<string>("PasswordHash")
                         .HasColumnType("text")
                         .HasColumnName("password_hash");
@@ -381,9 +389,27 @@ namespace Scriptoryum.Api.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("phone_number_confirmed");
 
+                    b.Property<DateTimeOffset?>("RemovedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("removed_at");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasDefaultValue("Member")
+                        .HasColumnName("role");
+
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("text")
                         .HasColumnName("security_stamp");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasDefaultValue("Active")
+                        .HasColumnName("status");
 
                     b.Property<bool>("TwoFactorEnabled")
                         .HasColumnType("boolean")
@@ -403,6 +429,9 @@ namespace Scriptoryum.Api.Migrations
                     b.HasIndex("NormalizedUserName")
                         .IsUnique()
                         .HasDatabaseName("user_name_index");
+
+                    b.HasIndex("OrganizationId")
+                        .HasDatabaseName("i_x_asp_net_users_organization_id");
 
                     b.ToTable("asp_net_users", (string)null);
                 });
@@ -576,6 +605,10 @@ namespace Scriptoryum.Api.Migrations
                         .HasColumnType("character varying(2000)")
                         .HasColumnName("description");
 
+                    b.Property<int?>("DocumentTypeId")
+                        .HasColumnType("integer")
+                        .HasColumnName("document_type_id");
+
                     b.Property<long>("FileSize")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bigint")
@@ -652,13 +685,23 @@ namespace Scriptoryum.Api.Migrations
                     b.HasKey("Id")
                         .HasName("p_k_documents");
 
+                    b.HasIndex("DocumentTypeId")
+                        .HasDatabaseName("i_x_documents_document_type_id");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("UploadedAt");
+
                     b.HasIndex("UploadedByUserId")
                         .HasDatabaseName("i_x_documents_uploaded_by_user_id");
 
                     b.HasIndex("WorkspaceId")
                         .HasDatabaseName("i_x_documents_workspace_id");
 
-                    b.ToTable("documents");
+                    b.ToTable("documents", t =>
+                        {
+                            t.HasCheckConstraint("CK_Document_OrganizationalIntegrity", "document_type_id IS NULL OR EXISTS (SELECT 1 FROM workspaces w INNER JOIN document_types dt ON dt.organization_id = w.organization_id WHERE w.id = workspace_id AND dt.id = document_type_id)");
+                        });
                 });
 
             modelBuilder.Entity("Scriptoryum.Api.Domain.Entities.DocumentChunk", b =>
@@ -702,6 +745,403 @@ namespace Scriptoryum.Api.Migrations
                     NpgsqlIndexBuilderExtensions.HasOperators(b.HasIndex("Embedding"), new[] { "vector_l2_ops" });
 
                     b.ToTable("document_chunks", "public");
+                });
+
+            modelBuilder.Entity("Scriptoryum.Api.Domain.Entities.DocumentFieldValue", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal?>("ConfidenceScore")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(5, 4)
+                        .HasColumnType("decimal(5,4)")
+                        .HasDefaultValue(0.0m)
+                        .HasColumnName("confidence_score");
+
+                    b.Property<string>("ContextExcerpt")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("context_excerpt");
+
+                    b.Property<string>("CorrectedValue")
+                        .HasColumnType("text")
+                        .HasColumnName("corrected_value");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("NOW()");
+
+                    b.Property<int>("DocumentId")
+                        .HasColumnType("integer")
+                        .HasColumnName("document_id");
+
+                    b.Property<int>("DocumentTypeFieldId")
+                        .HasColumnType("integer")
+                        .HasColumnName("document_type_field_id");
+
+                    b.Property<int?>("EndPosition")
+                        .HasColumnType("integer")
+                        .HasColumnName("end_position");
+
+                    b.Property<string>("ExtractedValue")
+                        .HasColumnType("text")
+                        .HasColumnName("extracted_value");
+
+                    b.Property<string>("ExtractionMetadata")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("extraction_metadata");
+
+                    b.Property<int?>("StartPosition")
+                        .HasColumnType("integer")
+                        .HasColumnName("start_position");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at")
+                        .HasDefaultValueSql("NOW()");
+
+                    b.Property<DateTime?>("ValidatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("validated_at");
+
+                    b.Property<string>("ValidatedByUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)")
+                        .HasColumnName("validated_by_user_id");
+
+                    b.Property<string>("ValidationStatus")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("Pending")
+                        .HasColumnName("validation_status");
+
+                    b.HasKey("Id")
+                        .HasName("p_k_document_field_values");
+
+                    b.HasIndex("DocumentTypeFieldId")
+                        .HasDatabaseName("i_x_document_field_values_document_type_field_id");
+
+                    b.HasIndex("ValidatedAt");
+
+                    b.HasIndex("ValidatedByUserId")
+                        .HasDatabaseName("i_x_document_field_values_validated_by_user_id");
+
+                    b.HasIndex("ValidationStatus");
+
+                    b.HasIndex("DocumentId", "DocumentTypeFieldId")
+                        .IsUnique();
+
+                    b.ToTable("document_field_values");
+                });
+
+            modelBuilder.Entity("Scriptoryum.Api.Domain.Entities.DocumentFieldValueHistory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ChangeReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("change_reason");
+
+                    b.Property<string>("ChangeType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("change_type");
+
+                    b.Property<string>("ChangedByUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)")
+                        .HasColumnName("changed_by_user_id");
+
+                    b.Property<decimal?>("ConfidenceScoreAfter")
+                        .HasColumnType("decimal(5,4)")
+                        .HasColumnName("confidence_score_after");
+
+                    b.Property<decimal?>("ConfidenceScoreBefore")
+                        .HasColumnType("decimal(5,4)")
+                        .HasColumnName("confidence_score_before");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("NOW()");
+
+                    b.Property<int>("DocumentFieldValueId")
+                        .HasColumnType("integer")
+                        .HasColumnName("document_field_value_id");
+
+                    b.Property<string>("NewValue")
+                        .HasColumnType("text")
+                        .HasColumnName("new_value");
+
+                    b.Property<string>("PreviousValue")
+                        .HasColumnType("text")
+                        .HasColumnName("previous_value");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at")
+                        .HasDefaultValueSql("NOW()");
+
+                    b.HasKey("Id")
+                        .HasName("p_k_document_field_value_histories");
+
+                    b.HasIndex("ChangedByUserId")
+                        .HasDatabaseName("i_x_document_field_value_histories_changed_by_user_id");
+
+                    b.HasIndex("DocumentFieldValueId")
+                        .HasDatabaseName("i_x_document_field_value_histories_document_field_value_id");
+
+                    b.HasIndex("UpdatedAt");
+
+                    b.ToTable("document_field_value_histories");
+                });
+
+            modelBuilder.Entity("Scriptoryum.Api.Domain.Entities.DocumentType", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("NOW()");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("description");
+
+                    b.Property<bool>("IsSystemDefault")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_system_default");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
+
+                    b.Property<int>("OrganizationId")
+                        .HasColumnType("integer")
+                        .HasColumnName("organization_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("Active")
+                        .HasColumnName("status");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at")
+                        .HasDefaultValueSql("NOW()");
+
+                    b.HasKey("Id")
+                        .HasName("p_k_document_types");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("OrganizationId", "Name")
+                        .IsUnique();
+
+                    b.ToTable("document_types");
+                });
+
+            modelBuilder.Entity("Scriptoryum.Api.Domain.Entities.DocumentTypeField", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("NOW()");
+
+                    b.Property<string>("DefaultValue")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("default_value");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("description");
+
+                    b.Property<int>("DocumentTypeId")
+                        .HasColumnType("integer")
+                        .HasColumnName("document_type_id");
+
+                    b.Property<string>("ExtractionPrompt")
+                        .HasColumnType("text")
+                        .HasColumnName("extraction_prompt");
+
+                    b.Property<string>("FieldName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("field_name");
+
+                    b.Property<int>("FieldOrder")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1)
+                        .HasColumnName("field_order");
+
+                    b.Property<string>("FieldType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("field_type");
+
+                    b.Property<bool>("IsRequired")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_required");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("Active")
+                        .HasColumnName("status");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at")
+                        .HasDefaultValueSql("NOW()");
+
+                    b.Property<string>("ValidationRegex")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("validation_regex");
+
+                    b.HasKey("Id")
+                        .HasName("p_k_document_type_fields");
+
+                    b.HasIndex("FieldOrder");
+
+                    b.HasIndex("DocumentTypeId", "FieldName")
+                        .IsUnique();
+
+                    b.ToTable("document_type_fields");
+                });
+
+            modelBuilder.Entity("Scriptoryum.Api.Domain.Entities.DocumentTypeTemplate", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Category")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("category");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("NOW()");
+
+                    b.Property<string>("CreatedByUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("description");
+
+                    b.Property<bool>("IsPublic")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("is_public");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
+
+                    b.Property<int>("OrganizationId")
+                        .HasColumnType("integer")
+                        .HasColumnName("organization_id");
+
+                    b.Property<string>("TemplateData")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("template_data");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at")
+                        .HasDefaultValueSql("NOW()");
+
+                    b.Property<int>("UsageCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("usage_count");
+
+                    b.HasKey("Id")
+                        .HasName("p_k_document_type_templates");
+
+                    b.HasIndex("Category");
+
+                    b.HasIndex("CreatedByUserId")
+                        .HasDatabaseName("i_x_document_type_templates_created_by_user_id");
+
+                    b.HasIndex("IsPublic");
+
+                    b.HasIndex("OrganizationId")
+                        .HasDatabaseName("i_x_document_type_templates_organization_id");
+
+                    b.HasIndex("UsageCount");
+
+                    b.ToTable("document_type_templates");
                 });
 
             modelBuilder.Entity("Scriptoryum.Api.Domain.Entities.ExtractedEntity", b =>
@@ -1045,69 +1485,6 @@ namespace Scriptoryum.Api.Migrations
                         .HasDatabaseName("i_x_organization_a_i_provider_configs_organization_id");
 
                     b.ToTable("organization_a_i_provider_configs");
-                });
-
-            modelBuilder.Entity("Scriptoryum.Api.Domain.Entities.OrganizationUser", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("NOW()");
-
-                    b.Property<DateTimeOffset>("JoinedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("joined_at");
-
-                    b.Property<int>("OrganizationId")
-                        .HasColumnType("integer")
-                        .HasColumnName("organization_id");
-
-                    b.Property<DateTimeOffset?>("RemovedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("removed_at");
-
-                    b.Property<string>("Role")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("text")
-                        .HasDefaultValue("Member")
-                        .HasColumnName("role");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("text")
-                        .HasDefaultValue("Active")
-                        .HasColumnName("status");
-
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at")
-                        .HasDefaultValueSql("NOW()");
-
-                    b.Property<string>("UserId")
-                        .HasColumnType("text")
-                        .HasColumnName("user_id");
-
-                    b.HasKey("Id")
-                        .HasName("p_k_organization_users");
-
-                    b.HasIndex("UserId")
-                        .HasDatabaseName("i_x_organization_users_user_id");
-
-                    b.HasIndex("OrganizationId", "UserId")
-                        .IsUnique();
-
-                    b.ToTable("organization_users");
                 });
 
             modelBuilder.Entity("Scriptoryum.Api.Domain.Entities.RiskDetected", b =>
@@ -1565,6 +1942,17 @@ namespace Scriptoryum.Api.Migrations
                     b.Navigation("AIConfiguration");
                 });
 
+            modelBuilder.Entity("Scriptoryum.Api.Domain.Entities.ApplicationUser", b =>
+                {
+                    b.HasOne("Scriptoryum.Api.Domain.Entities.Organization", "Organization")
+                        .WithMany("Users")
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("f_k_asp_net_users_organizations_organization_id");
+
+                    b.Navigation("Organization");
+                });
+
             modelBuilder.Entity("Scriptoryum.Api.Domain.Entities.ChatMessage", b =>
                 {
                     b.HasOne("Scriptoryum.Api.Domain.Entities.ChatSession", "ChatSession")
@@ -1599,7 +1987,7 @@ namespace Scriptoryum.Api.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .HasConstraintName("f_k_chat_sessions_asp_net_users_user_id");
 
-                    b.HasOne("Scriptoryum.Api.Domain.Entities.Workspace", null)
+                    b.HasOne("Scriptoryum.Api.Domain.Entities.Workspace", "Workspace")
                         .WithMany("ChatSessions")
                         .HasForeignKey("WorkspaceId")
                         .HasConstraintName("f_k_chat_sessions_workspaces_workspace_id");
@@ -1607,22 +1995,35 @@ namespace Scriptoryum.Api.Migrations
                     b.Navigation("Document");
 
                     b.Navigation("User");
+
+                    b.Navigation("Workspace");
                 });
 
             modelBuilder.Entity("Scriptoryum.Api.Domain.Entities.Document", b =>
                 {
+                    b.HasOne("Scriptoryum.Api.Domain.Entities.DocumentType", "DocumentType")
+                        .WithMany("Documents")
+                        .HasForeignKey("DocumentTypeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("f_k_documents_document_types_document_type_id");
+
                     b.HasOne("Scriptoryum.Api.Domain.Entities.ApplicationUser", "UploadedByUser")
                         .WithMany("Documents")
                         .HasForeignKey("UploadedByUserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .HasConstraintName("f_k_documents_asp_net_users_uploaded_by_user_id");
 
-                    b.HasOne("Scriptoryum.Api.Domain.Entities.Workspace", null)
+                    b.HasOne("Scriptoryum.Api.Domain.Entities.Workspace", "Workspace")
                         .WithMany("Documents")
                         .HasForeignKey("WorkspaceId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .HasConstraintName("f_k_documents_workspaces_workspace_id");
 
+                    b.Navigation("DocumentType");
+
                     b.Navigation("UploadedByUser");
+
+                    b.Navigation("Workspace");
                 });
 
             modelBuilder.Entity("Scriptoryum.Api.Domain.Entities.DocumentChunk", b =>
@@ -1635,6 +2036,99 @@ namespace Scriptoryum.Api.Migrations
                         .HasConstraintName("f_k_document_chunks_documents_document_id");
 
                     b.Navigation("Document");
+                });
+
+            modelBuilder.Entity("Scriptoryum.Api.Domain.Entities.DocumentFieldValue", b =>
+                {
+                    b.HasOne("Scriptoryum.Api.Domain.Entities.Document", "Document")
+                        .WithMany("FieldValues")
+                        .HasForeignKey("DocumentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("f_k_document_field_values_documents_document_id");
+
+                    b.HasOne("Scriptoryum.Api.Domain.Entities.DocumentTypeField", "DocumentTypeField")
+                        .WithMany("FieldValues")
+                        .HasForeignKey("DocumentTypeFieldId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("f_k_document_field_values_document_type_fields_document_type_fiel~");
+
+                    b.HasOne("Scriptoryum.Api.Domain.Entities.ApplicationUser", "ValidatedByUser")
+                        .WithMany()
+                        .HasForeignKey("ValidatedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("f_k_document_field_values_asp_net_users_validated_by_user_id");
+
+                    b.Navigation("Document");
+
+                    b.Navigation("DocumentTypeField");
+
+                    b.Navigation("ValidatedByUser");
+                });
+
+            modelBuilder.Entity("Scriptoryum.Api.Domain.Entities.DocumentFieldValueHistory", b =>
+                {
+                    b.HasOne("Scriptoryum.Api.Domain.Entities.ApplicationUser", "ChangedByUser")
+                        .WithMany()
+                        .HasForeignKey("ChangedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("f_k_document_field_value_histories_asp_net_users_changed_by_use~");
+
+                    b.HasOne("Scriptoryum.Api.Domain.Entities.DocumentFieldValue", "DocumentFieldValue")
+                        .WithMany("History")
+                        .HasForeignKey("DocumentFieldValueId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("f_k_document_field_value_histories_document_field_values_docume~");
+
+                    b.Navigation("ChangedByUser");
+
+                    b.Navigation("DocumentFieldValue");
+                });
+
+            modelBuilder.Entity("Scriptoryum.Api.Domain.Entities.DocumentType", b =>
+                {
+                    b.HasOne("Scriptoryum.Api.Domain.Entities.Organization", "Organization")
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("f_k_document_types_organizations_organization_id");
+
+                    b.Navigation("Organization");
+                });
+
+            modelBuilder.Entity("Scriptoryum.Api.Domain.Entities.DocumentTypeField", b =>
+                {
+                    b.HasOne("Scriptoryum.Api.Domain.Entities.DocumentType", "DocumentType")
+                        .WithMany("Fields")
+                        .HasForeignKey("DocumentTypeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("f_k_document_type_fields_document_types_document_type_id");
+
+                    b.Navigation("DocumentType");
+                });
+
+            modelBuilder.Entity("Scriptoryum.Api.Domain.Entities.DocumentTypeTemplate", b =>
+                {
+                    b.HasOne("Scriptoryum.Api.Domain.Entities.ApplicationUser", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("f_k_document_type_templates_asp_net_users_created_by_user_id");
+
+                    b.HasOne("Scriptoryum.Api.Domain.Entities.Organization", "Organization")
+                        .WithMany()
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("f_k_document_type_templates_organizations_organization_id");
+
+                    b.Navigation("CreatedByUser");
+
+                    b.Navigation("Organization");
                 });
 
             modelBuilder.Entity("Scriptoryum.Api.Domain.Entities.ExtractedEntity", b =>
@@ -1690,26 +2184,6 @@ namespace Scriptoryum.Api.Migrations
                         .HasConstraintName("f_k_organization_a_i_provider_configs_organizations_organizatio~");
 
                     b.Navigation("Organization");
-                });
-
-            modelBuilder.Entity("Scriptoryum.Api.Domain.Entities.OrganizationUser", b =>
-                {
-                    b.HasOne("Scriptoryum.Api.Domain.Entities.Organization", "Organization")
-                        .WithMany("OrganizationUsers")
-                        .HasForeignKey("OrganizationId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("f_k_organization_users_organizations_organization_id");
-
-                    b.HasOne("Scriptoryum.Api.Domain.Entities.ApplicationUser", "User")
-                        .WithMany("OrganizationUsers")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .HasConstraintName("f_k_organization_users_asp_net_users_user_id");
-
-                    b.Navigation("Organization");
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Scriptoryum.Api.Domain.Entities.RiskDetected", b =>
@@ -1811,8 +2285,6 @@ namespace Scriptoryum.Api.Migrations
 
                     b.Navigation("Notifications");
 
-                    b.Navigation("OrganizationUsers");
-
                     b.Navigation("WorkspaceUsers");
                 });
 
@@ -1825,11 +2297,30 @@ namespace Scriptoryum.Api.Migrations
                 {
                     b.Navigation("ExtractedEntities");
 
+                    b.Navigation("FieldValues");
+
                     b.Navigation("Insights");
 
                     b.Navigation("RisksDetected");
 
                     b.Navigation("TimelineEvents");
+                });
+
+            modelBuilder.Entity("Scriptoryum.Api.Domain.Entities.DocumentFieldValue", b =>
+                {
+                    b.Navigation("History");
+                });
+
+            modelBuilder.Entity("Scriptoryum.Api.Domain.Entities.DocumentType", b =>
+                {
+                    b.Navigation("Documents");
+
+                    b.Navigation("Fields");
+                });
+
+            modelBuilder.Entity("Scriptoryum.Api.Domain.Entities.DocumentTypeField", b =>
+                {
+                    b.Navigation("FieldValues");
                 });
 
             modelBuilder.Entity("Scriptoryum.Api.Domain.Entities.Organization", b =>
@@ -1838,7 +2329,7 @@ namespace Scriptoryum.Api.Migrations
 
                     b.Navigation("AIProviderConfigs");
 
-                    b.Navigation("OrganizationUsers");
+                    b.Navigation("Users");
 
                     b.Navigation("Workspaces");
                 });

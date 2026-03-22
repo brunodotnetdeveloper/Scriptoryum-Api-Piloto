@@ -961,16 +961,6 @@ public class ScriptoryumDbContext(DbContextOptions<ScriptoryumDbContext> options
                     .HasDefaultValueSql("NOW()");
             }
         }
-        
-        // Add organizational integrity constraint
-        // Ensures that a document can only use document types from the same organization as its workspace
-        builder.Entity<Document>()
-            .ToTable(tb => tb.HasCheckConstraint(
-                "CK_Document_OrganizationalIntegrity",
-                "document_type_id IS NULL OR EXISTS (" +
-                "SELECT 1 FROM workspaces w " +
-                "INNER JOIN document_types dt ON dt.organization_id = w.organization_id " +
-                "WHERE w.id = workspace_id AND dt.id = document_type_id)"));
     }
 
     private static string ToSnakeCase(string input)
