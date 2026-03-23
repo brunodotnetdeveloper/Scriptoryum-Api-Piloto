@@ -173,7 +173,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowScriptoryumOrigins", policy =>
     {
         policy.WithOrigins(
-                "https://app.scriptoryum.com.br",
+                "https://app.scriptoryum.cloud",
                 "http://localhost:8080",
                 "https://localhost:8080",
                 "http://localhost:5173",
